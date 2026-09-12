@@ -48,6 +48,7 @@ export interface PortLocation {
 export interface QuoteFormData {
   vesselName: string;
   imoNumber: string;
+  vesselType?: string;
   portOfCall: string;
   etaDate: string;
   etaTime: string;
@@ -64,6 +65,19 @@ export interface QuoteFormData {
   companyName: string;
 }
 
+export type RFQStatus = 'New' | 'In Review' | 'Quoted (60m)' | 'Order Confirmed' | 'Dispatched' | 'Delivered' | 'Archived';
+
+export interface AdminQuoteRequest extends QuoteFormData {
+  id: string;
+  submittedAt: string;
+  status: RFQStatus;
+  assignedOfficer?: string;
+  quotedAmountUSD?: number;
+  dispatchLaunchBoat?: string;
+  adminNotes?: string;
+  lastUpdated?: string;
+}
+
 export interface ContactMessage {
   fullName: string;
   company: string;
@@ -71,4 +85,30 @@ export interface ContactMessage {
   phone: string;
   inquiryType: string;
   message: string;
+}
+
+export type ContactStatus = 'New' | 'Replied' | 'Follow-up' | 'Closed';
+
+export interface AdminContactInquiry extends ContactMessage {
+  id: string;
+  submittedAt: string;
+  status: ContactStatus;
+  assignedTo?: string;
+  adminNotes?: string;
+  lastUpdated?: string;
+}
+
+export type UserRole = 'admin' | 'client';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  role: UserRole;
+  title?: string;
+  phone?: string;
+  port?: string;
+  avatarInitials?: string;
+  createdAt: string;
 }

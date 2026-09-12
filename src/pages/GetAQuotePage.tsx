@@ -18,6 +18,7 @@ import {
   Download
 } from 'lucide-react';
 import { QuoteFormData } from '../types';
+import { requestStore } from '../services/requestStore';
 
 export const GetAQuotePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -131,13 +132,15 @@ export const GetAQuotePage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Persist into store
+    const saved = requestStore.addQuoteRequest(formData);
+
     // Simulate 1.2s loading state
     setTimeout(() => {
       setIsSubmitting(false);
-      const generatedId = `MMP-RFQ-${Math.floor(10000 + Math.random() * 90000)}`;
-      setSubmittedQuoteId(generatedId);
+      setSubmittedQuoteId(saved.id);
       window.scrollTo({ top: 100, behavior: 'smooth' });
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -201,6 +204,15 @@ export const GetAQuotePage: React.FC = () => {
                 <MessageSquare className="w-4 h-4" />
                 <span>Confirm on WhatsApp</span>
               </a>
+
+              <Link
+                to="/track-vessel"
+                className="bg-[#0B2545] hover:bg-[#12345C] text-white font-bold text-sm px-5 py-2.5 rounded-lg flex items-center gap-2 shadow border border-sky-400/40"
+              >
+                <Ship className="w-4 h-4 text-sky-300" />
+                <span>Track on Suez AIS Map →</span>
+              </Link>
+
               <button
                 onClick={() => {
                   setSubmittedQuoteId(null);

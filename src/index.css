@@ -11,6 +11,14 @@
   font-family: 'Cinzel', serif;
 }
 
+.font-cairo {
+  font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif !important;
+}
+
+[dir="rtl"] {
+  font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+}
+
 .font-script {
   font-family: 'Caveat', cursive;
 }

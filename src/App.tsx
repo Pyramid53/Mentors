@@ -11,6 +11,7 @@ import { ContactPage } from './pages/ContactPage';
 import { ClientPortalPage } from './pages/ClientPortalPage';
 import { AboutPage } from './pages/AboutPage';
 import { PortsPage } from './pages/PortsPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 // Scroll to top upon route change
 const ScrollToTop: React.FC = () => {
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/why-us" element={<WhyUsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/client-portal" element={<ClientPortalPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/ports" element={<PortsPage />} />
             {/* Catch-all fallback */}

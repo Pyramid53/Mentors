@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   MapPin,
   Phone,
@@ -10,9 +11,11 @@ import {
   MessageSquare,
   Globe,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Ship
 } from 'lucide-react';
 import { ContactMessage } from '../types';
+import { requestStore } from '../services/requestStore';
 
 export const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState<ContactMessage>({
@@ -31,10 +34,13 @@ export const ContactPage: React.FC = () => {
     e.preventDefault();
     setIsSending(true);
 
+    // Save to request store
+    requestStore.addContactInquiry(formData);
+
     setTimeout(() => {
       setIsSending(false);
       setIsSent(true);
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -180,7 +186,17 @@ export const ContactPage: React.FC = () => {
                 <p className="text-slate-600 text-sm max-w-md mx-auto leading-relaxed">
                   Thank you, <strong className="text-slate-900 font-semibold">{formData.fullName}</strong>. Your message has been routed to our Suez duty superintendent. We will respond to <strong className="text-slate-900 font-semibold">{formData.email}</strong> within 30 minutes.
                 </p>
-                <div className="pt-4">
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+                  <a
+                    href="https://wa.me/201008924477?text=Hello%20Mentors%20Marine,%20I%20have%20sent%20an%20inquiry%20via%20your%20website"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg flex items-center gap-2 shadow"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Urgent Follow-up via WhatsApp</span>
+                  </a>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -194,7 +210,7 @@ export const ContactPage: React.FC = () => {
                         message: '',
                       });
                     }}
-                    className="bg-[#0B2545] text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg hover:bg-[#12345C] transition-colors"
+                    className="bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg transition-colors"
                   >
                     Send Another Message
                   </button>
