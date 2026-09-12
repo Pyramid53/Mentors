@@ -1,0 +1,6 @@
+{
+  "name": "Mentors Marine Provisions",
+  "description": "Suez-based ship chandler and vessel supply company providing 24/7 fresh provisions, technical stores, bonded stores, and maritime logistics across Egyptian ports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
