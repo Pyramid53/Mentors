@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
 import {
   Anchor,
   ShieldCheck,
@@ -21,9 +22,10 @@ export const AboutPage: React.FC = () => {
       <section className="relative py-20 bg-[#0B2545] text-white overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-25">
           <img
-            src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2000&q=80"
-            alt="Suez Canal shipping lanes"
+            src={mentorsSupplyBoat}
+            alt="Mentors Marine vessel provisioning in Suez Canal"
             className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
           />
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">

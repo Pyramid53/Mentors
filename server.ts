@@ -270,57 +270,92 @@ async function seedSupabaseIfEmpty() {
       }
     }
 
-    // Check app_users
-    const { count: userCount } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true });
+    // Check and seed app_users (ensuring admin@mentors.com exists with owner credentials)
+    const seedAdminUser = {
+      id: 'USR-ADM-01',
+      name: 'Capt. Tarek Mansour (Owner)',
+      email: 'admin@mentors.com',
+      company: 'Mentors Marine Services SAE',
+      role: 'admin',
+      phone: '+20 100 489 2210',
+      avatar_initials: 'TM',
+      password_hash: 'tarekmentorsowner'
+    };
 
-    if ((userCount || 0) === 0) {
-      console.log('Seeding initial maritime users to Supabase...');
-      const seedUsers = [
-        {
-          id: 'USR-ADM-01',
-          name: 'Capt. Tarek Mansour',
-          email: 'admin@mentors-marine.com',
-          company: 'Mentors Marine Services SAE',
-          role: 'admin',
-          phone: '+20 100 489 2210',
-          avatar_initials: 'TM',
-          password_hash: 'admin123'
-        },
-        {
-          id: 'USR-CLT-01',
-          name: 'Capt. Marco Rossi',
-          email: 'm.rossi@msc-operations.com',
-          company: 'Mediterranean Shipping Company (Geneva)',
-          role: 'client',
-          phone: '+39 340 551 2894',
-          avatar_initials: 'MR',
-          password_hash: 'client123'
-        },
-        {
-          id: 'USR-CLT-02',
-          name: 'Sarah Lindqvist',
-          email: 'superintendent@shipping.com',
-          company: 'Nordic Tankers AS',
-          role: 'client',
-          phone: '+47 902 33 412',
-          avatar_initials: 'SL',
-          password_hash: 'shipping123'
-        }
-      ];
-
-      const { error: userError } = await supabase.from('app_users').insert(seedUsers);
-      if (userError) {
-        console.warn('Could not auto-seed app_users:', userError.message);
-      } else {
-        console.log(`Successfully seeded ${seedUsers.length} app_users to Supabase!`);
+    const clientUsers = [
+      {
+        id: 'USR-CLT-01',
+        name: 'Capt. Marco Rossi',
+        email: 'm.rossi@msc-operations.com',
+        company: 'Mediterranean Shipping Company (Geneva)',
+        role: 'client',
+        phone: '+39 340 551 2894',
+        avatar_initials: 'MR',
+        password_hash: 'client123'
+      },
+      {
+        id: 'USR-CLT-02',
+        name: 'Sarah Lindqvist',
+        email: 'superintendent@shipping.com',
+        company: 'Nordic Tankers AS',
+        role: 'client',
+        phone: '+47 902 33 412',
+        avatar_initials: 'SL',
+        password_hash: 'shipping123'
       }
+    ];
+
+    // Always ensure admin@mentors.com exists with admin role in database
+    const { error: adminUpsertError } = await supabase
+      .from('app_users')
+      .upsert([seedAdminUser], { onConflict: 'id' });
+
+    if (adminUpsertError) {
+      console.warn('Could not sync app_users to Supabase:', adminUpsertError.message);
+    } else {
+      console.log('Successfully synced admin account (admin@mentors.com) to Supabase app_users table!');
     }
   } catch (err: any) {
     console.warn('Seeding check error:', err?.message || err);
   }
 }
+
+// Server-side user storage fallback (when Supabase is in local mode / not yet provisioned)
+const SERVER_USERS: any[] = [
+  {
+    id: 'USR-ADM-01',
+    name: 'Capt. Tarek Mansour (Owner)',
+    email: 'admin@mentors.com',
+    company: 'Mentors Marine Services SAE',
+    role: 'admin',
+    phone: '+20 100 489 2210',
+    avatar_initials: 'TM',
+    password_hash: 'tarekmentorsowner',
+    created_at: '2025-01-10T08:00:00Z'
+  },
+  {
+    id: 'USR-CLT-01',
+    name: 'Capt. Marco Rossi',
+    email: 'm.rossi@msc-operations.com',
+    company: 'Mediterranean Shipping Company (Geneva)',
+    role: 'client',
+    phone: '+39 340 551 2894',
+    avatar_initials: 'MR',
+    password_hash: 'client123',
+    created_at: '2025-03-15T10:30:00Z'
+  },
+  {
+    id: 'USR-CLT-02',
+    name: 'Sarah Lindqvist',
+    email: 'superintendent@shipping.com',
+    company: 'Nordic Tankers AS',
+    role: 'client',
+    phone: '+47 902 33 412',
+    avatar_initials: 'SL',
+    password_hash: 'shipping123',
+    created_at: '2025-04-02T12:00:00Z'
+  }
+];
 
 async function startServer() {
   const app = express();
@@ -555,6 +590,81 @@ async function startServer() {
   });
 
   // 8. Auth API: Register & Login endpoints
+  app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanPassword = String(password).trim();
+    const supabase = getSupabaseClient();
+
+    if (supabase) {
+      try {
+        const { data: dbUser, error: dbError } = await supabase
+          .from('app_users')
+          .select('*')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (dbError) {
+          console.error('Supabase auth error:', dbError.message);
+          return res.status(500).json({ success: false, error: `Database error: ${dbError.message}` });
+        }
+
+        if (!dbUser) {
+          return res.status(401).json({ success: false, error: 'No account found with this email address.' });
+        }
+
+        if (dbUser.password_hash !== cleanPassword) {
+          return res.status(401).json({ success: false, error: 'Incorrect password.' });
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            role: dbUser.role, // strictly from database ('admin' or 'client')
+            company: dbUser.company,
+            phone: dbUser.phone,
+            avatarInitials: dbUser.avatar_initials || 'MM',
+            createdAt: dbUser.created_at
+          }
+        });
+      } catch (err: any) {
+        console.error('Supabase login exception:', err);
+        return res.status(500).json({ success: false, error: err.message });
+      }
+    }
+
+    // Database server-side fallback (before Supabase keys are configured)
+    const matchedUser = SERVER_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (!matchedUser) {
+      return res.status(401).json({ success: false, error: 'No account found with this email address.' });
+    }
+
+    if (matchedUser.password_hash !== cleanPassword) {
+      return res.status(401).json({ success: false, error: 'Incorrect password.' });
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: matchedUser.id,
+        name: matchedUser.name,
+        email: matchedUser.email,
+        role: matchedUser.role, // 'admin' or 'client'
+        company: matchedUser.company,
+        phone: matchedUser.phone,
+        avatarInitials: matchedUser.avatar_initials || 'MM',
+        createdAt: matchedUser.created_at
+      }
+    });
+  });
+
   app.post('/api/auth/register', async (req, res) => {
     const { name, email, company, phone, password } = req.body;
     const supabase = getSupabaseClient();
@@ -572,14 +682,20 @@ async function startServer() {
 
     const userRecord = {
       id: `USR-${Date.now()}`,
-      name,
+      name: name.trim(),
       email: email.toLowerCase().trim(),
-      role: 'client',
+      role: 'client', // All self-registrations are strictly 'client' role
       company: company || 'Shipping Line Operator',
       phone: phone || '',
       avatar_initials: initials,
-      password_hash: password
+      password_hash: String(password).trim()
     };
+
+    // Save in fallback list
+    SERVER_USERS.push({
+      ...userRecord,
+      created_at: new Date().toISOString()
+    });
 
     if (supabase) {
       try {

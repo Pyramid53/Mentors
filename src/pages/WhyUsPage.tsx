@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
 import {
   Clock,
   Radio,
@@ -147,9 +148,10 @@ export const WhyUsPage: React.FC = () => {
         {/* Port sunset background image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=2000&q=80"
-            alt="Vessels docked at Suez port at sunset"
+            src={mentorsSupplyBoat}
+            alt="Mentors Marine vessels supplying cargo ships at Suez"
             className="w-full h-full object-cover brightness-75"
+            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0B2545]/95 via-[#0B2545]/85 to-[#0B2545]/95"></div>
         </div>

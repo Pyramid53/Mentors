@@ -83,10 +83,10 @@ export const PortsPage: React.FC = () => {
 
               <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between">
                 <Link
-                  to={`/track-vessel?tab=arrivals`}
+                  to="/contact"
                   className="text-xs font-bold text-slate-600 hover:text-[#0B2545]"
                 >
-                  View Arrivals →
+                  Contact Port Agent →
                 </Link>
                 <Link
                   to={`/get-a-quote?port=${encodeURIComponent(port.name)}`}

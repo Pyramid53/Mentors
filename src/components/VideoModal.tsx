@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Play, Volume2, VolumeX, ShieldCheck, Ship, Clock, CheckCircle2 } from 'lucide-react';
+import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
 
 interface VideoModalProps {
   isOpen: boolean;
@@ -35,9 +36,10 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
         <div className="relative aspect-video bg-gradient-to-br from-slate-900 via-[#0B2545] to-slate-950 flex items-center justify-center overflow-hidden group">
           {/* Background maritime cinematic image */}
           <img
-            src="https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=1600&q=80"
-            alt="Vessel provisioning in Suez Canal"
+            src={mentorsSupplyBoat}
+            alt="Mentors Marine vessel provisioning in Suez Canal"
             className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
+            referrerPolicy="no-referrer"
           />
 
           {/* Animated radar overlay */}

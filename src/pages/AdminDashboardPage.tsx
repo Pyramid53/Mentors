@@ -17,24 +17,29 @@ import {
   ExternalLink,
   ChevronRight,
   Anchor,
-  Radio,
   Plus,
   RefreshCw,
   Eye,
+  EyeOff,
   Check,
   Building2,
   Calendar,
   Layers,
   Sparkles,
   X,
-  Compass,
   AlertCircle,
   Lock,
   LogOut,
   User,
   Shield,
   Printer,
-  Globe
+  Globe,
+  TrendingUp,
+  DollarSign,
+  BarChart2,
+  PieChart,
+  Users,
+  Briefcase
 } from 'lucide-react';
 import { requestStore } from '../services/requestStore';
 import { authStore } from '../services/authStore';
@@ -55,21 +60,22 @@ export const AdminDashboardPage: React.FC = () => {
   // Localization
   const [currentLang, setCurrentLang] = useState<Language>(languageStore.getLanguage());
 
-  // Operational State
+  // Operational State & Navigation tabs matching Blueprint Panel 8
+  // Tabs: 'dashboard' (Analytics Overview), 'rfqs' (RFQs), 'quotes' (Quotes/Pricing), 'orders' (Orders), 'customers' (Customers), 'inquiries' (Messages)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'rfqs' | 'quotes' | 'orders' | 'customers' | 'inquiries'>('dashboard');
+
+  // Quotes & Inquiries from store
   const [quotes, setQuotes] = useState<AdminQuoteRequest[]>([]);
   const [inquiries, setInquiries] = useState<AdminContactInquiry[]>([]);
-  const [activeTab, setActiveTab] = useState<'quotes' | 'inquiries' | 'fleet'>('quotes');
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [portFilter, setPortFilter] = useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Selected quote for drawer
+  // Selected quote for detailed pricing drawer
   const [selectedQuote, setSelectedQuote] = useState<AdminQuoteRequest | null>(null);
 
-  // Drawer form state
+  // Drawer form state for editing pricing/quote
   const [editQuotedAmount, setEditQuotedAmount] = useState<string>('');
   const [editOfficer, setEditOfficer] = useState<string>('');
   const [editLaunchBoat, setEditLaunchBoat] = useState<string>('');
@@ -107,13 +113,13 @@ export const AdminDashboardPage: React.FC = () => {
         });
       }
     } catch {
-      setDbStatus({ configured: false, message: 'Local Cache Mode', count: 0 });
+      setDbStatus({ configured: false, message: 'Local Mode', count: 0 });
     }
   };
 
   useEffect(() => {
     checkDbHealth();
-    const interval = setInterval(checkDbHealth, 25000);
+    const interval = setInterval(checkDbHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -122,7 +128,7 @@ export const AdminDashboardPage: React.FC = () => {
     await requestStore.refreshFromBackend();
     await checkDbHealth();
     setIsSyncing(false);
-    showToast('PostgreSQL Database synchronized with Suez Cloud Dispatch repository.');
+    showToast('Database synchronized with Suez Cloud Dispatch repository.');
   };
 
   const showToast = (msg: string) => {
@@ -141,7 +147,8 @@ export const AdminDashboardPage: React.FC = () => {
           timeZone: 'Africa/Cairo',
           hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit'
+          second: '2-digit',
+          hour12: false
         })
       );
       setZuluTime(
@@ -149,7 +156,8 @@ export const AdminDashboardPage: React.FC = () => {
           timeZone: 'UTC',
           hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit'
+          second: '2-digit',
+          hour12: false
         })
       );
     };
@@ -158,216 +166,175 @@ export const AdminDashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Subscribe to quote & inquiry changes
   useEffect(() => {
-    const loadData = () => {
+    const refreshData = () => {
       setQuotes(requestStore.getQuoteRequests());
       setInquiries(requestStore.getContactInquiries());
     };
-    loadData();
-    const unsub = requestStore.subscribe(loadData);
-    return () => unsub();
+    refreshData();
+    const unsubReq = requestStore.subscribe(refreshData);
+    return () => unsubReq();
   }, []);
 
+  // Update selected quote state if drawer opens
   useEffect(() => {
     if (selectedQuote) {
       setEditQuotedAmount(selectedQuote.quotedAmountUSD ? String(selectedQuote.quotedAmountUSD) : '');
-      setEditOfficer(selectedQuote.assignedOfficer || 'Capt. Tarek Mansour (Suez Duty)');
-      setEditLaunchBoat(selectedQuote.dispatchLaunchBoat || 'Mentors Launch 02 (Cold Chain)');
+      setEditOfficer(selectedQuote.assignedOfficer || currentUser?.name || 'Capt. Tarek Mansour');
+      setEditLaunchBoat(selectedQuote.dispatchLaunchBoat || 'Mentors Star I (Suez Anchorage)');
       setEditAdminNotes(selectedQuote.adminNotes || '');
     }
-  }, [selectedQuote]);
+  }, [selectedQuote, currentUser]);
 
-  // Handle Staff Authentication
-  const handleStaffLogin = (e: React.FormEvent) => {
+  const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStaffError(null);
     setIsAuthorizing(true);
 
-    setTimeout(() => {
-      const res = authStore.login(staffEmail, staffPassword);
-      setIsAuthorizing(false);
+    const res = await authStore.login(staffEmail, staffPassword);
+    setIsAuthorizing(false);
 
-      if (!res.success) {
-        setStaffError(res.error || 'Invalid staff credentials');
-      } else if (res.user?.role !== 'admin') {
-        setStaffError(
-          `Security Clearance Denied: Account "${res.user?.name}" is registered as a Client Account. Operations Admin access is restricted to Duty Officers with Administrator clearance.`
-        );
-      } else {
-        showToast(`Clearance Granted: Welcome Capt. ${res.user.name.split(' ')[0]}`);
-      }
-    }, 400);
+    if (!res.success) {
+      setStaffError(res.error || 'Authentication rejected. Access restricted to authorized personnel.');
+    } else if (res.user?.role !== 'admin') {
+      authStore.logout();
+      setStaffError('Access Denied: Your account role is Client. Admin operations require authorized Suez dispatch credentials.');
+    } else {
+      showToast(`Operations Clearance Approved: Welcome ${res.user.name}`);
+    }
   };
 
-  const handleQuickStaffDemo = () => {
-    setStaffError(null);
-    const user = authStore.loginAsDemoAdmin();
-    showToast(`Officer Clearance Granted: ${user.name}`);
-  };
-
-  const handleSignOut = () => {
+  const handleLogout = () => {
     authStore.logout();
-    navigate('/');
+    setSelectedQuote(null);
+    showToast('Securely logged out from Operations Command.');
   };
 
-  // Status Progression
-  const handleStatusChange = (newStatus: RFQStatus) => {
+  const handleStatusChange = (id: string, newStatus: RFQStatus) => {
+    requestStore.updateQuoteStatus(id, newStatus);
+    showToast(`Quote #${id} updated to status: ${newStatus}`);
+    if (selectedQuote && selectedQuote.id === id) {
+      setSelectedQuote((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+  };
+
+  const handleSaveQuoteDetails = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedQuote) return;
-    const updated = requestStore.updateQuoteStatus(selectedQuote.id, newStatus, {
-      quotedAmountUSD: editQuotedAmount ? parseFloat(editQuotedAmount) : undefined,
+
+    const amount = parseFloat(editQuotedAmount);
+    requestStore.updateQuoteRequest(selectedQuote.id, {
+      quotedAmountUSD: isNaN(amount) ? undefined : amount,
       assignedOfficer: editOfficer,
       dispatchLaunchBoat: editLaunchBoat,
       adminNotes: editAdminNotes
     });
-    if (updated) {
-      setSelectedQuote(updated);
-      showToast(`Vessel ${updated.vesselName} status updated to: ${newStatus}`);
-    }
+
+    showToast(`Quotation #${selectedQuote.id} pricing and dispatch records updated.`);
+    setSelectedQuote(null);
   };
 
-  const handleSaveDetails = () => {
-    if (!selectedQuote) return;
-    const updated = requestStore.updateQuoteStatus(selectedQuote.id, selectedQuote.status, {
-      quotedAmountUSD: editQuotedAmount ? parseFloat(editQuotedAmount) : undefined,
-      assignedOfficer: editOfficer,
-      dispatchLaunchBoat: editLaunchBoat,
-      adminNotes: editAdminNotes
-    });
-    if (updated) {
-      setSelectedQuote(updated);
-      showToast(`Operational details saved for RFQ ${updated.id}`);
-    }
-  };
+  const isStaffAuthenticated = currentUser !== null && currentUser.role === 'admin';
 
-  const generateWhatsAppLink = (quote: AdminQuoteRequest) => {
-    const text = `*Mentors Marine Egypt - 24/7 Operations Desk*%0A%0A*Vessel:* ${quote.vesselName} (IMO: ${quote.imoNumber})%0A*Port:* ${quote.portOfCall}%0A*Status:* ${quote.status}%0A*Quote Ref:* ${quote.id}%0A%0AHello ${quote.contactName}, this is ${editOfficer || 'Capt. Tarek'} from Mentors Marine Suez duty station. We have received your requisition indent for ${quote.services?.join(', ') || 'Provisions'}.%0A%0AWe are standing by for your ETA at ${quote.portOfCall}.`;
-    const cleanPhone = quote.contactPhone.replace(/[^0-9]/g, '');
-    return `https://wa.me/${cleanPhone}?text=${text}`;
-  };
+  // Calculations for KPI Panel 8:
+  // Today's Overview from blueprint:
+  // Vessels Detected (47), Leads Contacted (13), Replies (5), RFQs (2), Orders (1), Est. Revenue ($2,500)
+  const vesselsDetectedCount = 47;
+  const leadsContactedCount = 13;
+  const repliesCount = 5;
+  const rfqsCount = quotes.length > 0 ? quotes.length : 2;
+  const activeOrdersCount = quotes.filter((q) => q.status === 'Order Confirmed' || q.status === 'Dispatched' || q.status === 'Delivered').length || 1;
+  const estRevenueSum = quotes.reduce((acc, q) => acc + (q.quotedAmountUSD || 0), 0) || 2500;
 
-  const handleExportCSV = () => {
-    if (quotes.length === 0) return;
-    const headers = ['Quote_ID', 'Vessel_Name', 'IMO', 'Port', 'ETA', 'Priority', 'Services', 'Status', 'Quoted_USD', 'Contact', 'Email'];
-    const rows = quotes.map((q) => [
-      q.id,
-      `"${q.vesselName.replace(/"/g, '""')}"`,
-      q.imoNumber,
-      `"${q.portOfCall.replace(/"/g, '""')}"`,
-      `${q.etaDate} ${q.etaTime}`,
-      q.priority,
-      `"${q.services.join('; ')}"`,
-      q.status,
-      q.quotedAmountUSD || 0,
-      `"${q.contactName}"`,
-      q.contactEmail
-    ]);
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Mentors_Marine_Quotes_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Requisition registry exported as CSV.');
-  };
+  // Filtered quotes for RFQ table
+  const filteredQuotes = quotes.filter((q) => {
+    const matchStatus = statusFilter === 'ALL' || q.status === statusFilter;
+    const matchSearch =
+      q.vesselName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.imoNumber.includes(searchQuery) ||
+      q.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchStatus && matchSearch;
+  });
 
-  const isAr = currentLang === 'ar';
+  // Blueprint Top Customers
+  const topCustomers = [
+    { name: 'XYZ Shipping Ltd', orders: 12, flag: '🇨🇭', volume: '$48,200', rating: 'VIP' },
+    { name: 'ABC Maritime Corp', orders: 8, flag: '🇬🇷', volume: '$32,500', rating: 'Frequent' },
+    { name: 'Oceanic Line (Geneva)', orders: 6, flag: '🇮🇹', volume: '$27,800', rating: 'Frequent' },
+    { name: 'Global Tankers AS', orders: 5, flag: '🇳🇴', volume: '$21,400', rating: 'Standard' },
+    { name: 'Meridian Shipping Co', orders: 4, flag: '🇩🇰', volume: '$16,900', rating: 'Standard' }
+  ];
 
-  // =========================================================================
-  // SECURITY GATE SCREEN: IF NOT AUTHENTICATED AS ADMIN
-  // =========================================================================
-  if (!currentUser || currentUser.role !== 'admin') {
+  // 1. IF NOT AUTHENTICATED AS ADMIN: SHOW CLEARANCE CHALLENGE
+  if (!isStaffAuthenticated) {
     return (
-      <div className="w-full min-h-[85vh] bg-[#071322] flex items-center justify-center p-4" id="staff-auth-gate">
-        <div className="w-full max-w-md bg-[#0B1E36] border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-8 text-white relative overflow-hidden">
-          {/* Subtle Top Accent */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[#C81D25] to-amber-500"></div>
+      <div className="w-full min-h-[85vh] bg-[#07172C] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-[#0B2545] p-8 rounded-2xl border border-white/15 shadow-2xl relative overflow-hidden">
+          {/* Subtle radar accent */}
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
-          {/* Header */}
-          <div className="text-center space-y-3 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0A192F] to-[#0B2545] border border-amber-400/40 flex items-center justify-center mx-auto shadow-inner text-amber-400">
-              <Shield className="w-7 h-7 stroke-[2.2]" />
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-amber-400 mb-4 shadow-inner">
+              <Shield className="w-8 h-8" />
             </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/30">
-                Staff Clearance Required
-              </span>
-              <h1 className="text-xl font-bold font-cinzel tracking-wider text-white mt-2">
-                Suez Dispatch Command
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Restricted access for Mentors Marine Operations & Duty Officers.
-              </p>
-            </div>
+            <span className="text-xs font-mono font-bold tracking-widest uppercase text-sky-300 block">
+              Suez Canal Authority Free Zone
+            </span>
+            <h2 className="text-2xl font-extrabold text-white font-cinzel mt-1 tracking-wide">
+              Operations Clearance Desk
+            </h2>
+            <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+              Restricted to authorized Mentors Marine Operations Superintendents, Dispatch Officers & Customs Logistics.
+            </p>
           </div>
 
-          {/* Client Notice if client is logged in */}
-          {currentUser && currentUser.role === 'client' && (
-            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-amber-300">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Client Session Active</span>
-              </div>
-              <p>
-                You are currently signed in as <strong>{currentUser.name}</strong> ({currentUser.company}).
-                This terminal is reserved for Suez Port Dispatch Staff.
-              </p>
-              <div className="pt-1">
-                <Link
-                  to="/client-portal"
-                  className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300 font-bold underline"
-                >
-                  Return to your Client Portal & Orders →
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
           {staffError && (
-            <div className="mb-5 p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-xs text-red-200 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <div className="p-3 bg-red-950/80 border border-red-500/60 rounded-xl text-red-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
               <span>{staffError}</span>
             </div>
           )}
 
-          {/* Staff Login Form */}
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Staff Official Email / Callsign
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Staff Officer Email
               </label>
-              <input
-                type="email"
-                required
-                value={staffEmail}
-                onChange={(e) => setStaffEmail(e.target.value)}
-                placeholder="admin@mentors-marine.com"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
-              />
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="email"
+                  required
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  placeholder="admin@mentors.com"
+                  className="w-full pl-10 pr-3 py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Security Passphrase
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Password / Clearance Key
               </label>
               <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={staffPassword}
                   onChange={(e) => setStaffPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                  placeholder="Enter administrator password"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
                 >
-                  <Eye className="w-4 h-4" />
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -375,617 +342,647 @@ export const AdminDashboardPage: React.FC = () => {
             <button
               type="submit"
               disabled={isAuthorizing}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99]"
+              className="w-full bg-[#C81D25] hover:bg-[#a8161d] text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 mt-4 disabled:opacity-60"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>{isAuthorizing ? 'Verifying Clearance...' : 'Verify Staff Clearance'}</span>
+              <ShieldCheck className="w-4 h-4" />
+              <span>{isAuthorizing ? 'Authorizing Dispatch...' : 'Authorize Operations Access'}</span>
             </button>
           </form>
-
-          {/* Demo Staff Shortcut for Evaluation */}
-          <div className="mt-6 pt-5 border-t border-slate-800 space-y-3">
-            <button
-              type="button"
-              onClick={handleQuickStaffDemo}
-              className="w-full py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>1-Click Duty Officer Access (Capt. Tarek Mansour)</span>
-            </button>
-
-            <div className="text-center">
-              <Link to="/" className="text-xs text-slate-400 hover:text-white transition-colors">
-                ← Return to Public Homepage
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     );
   }
 
-  // =========================================================================
-  // AUTHENTICATED STAFF COMMAND DESK VIEW
-  // =========================================================================
-  const filteredQuotes = quotes.filter((q) => {
-    if (statusFilter !== 'ALL' && q.status !== statusFilter) return false;
-    if (portFilter !== 'ALL' && !q.portOfCall.includes(portFilter)) return false;
-    if (priorityFilter !== 'ALL' && !q.priority.includes(priorityFilter)) return false;
-    if (searchQuery) {
-      const qText = searchQuery.toLowerCase();
-      const matchVessel = q.vesselName.toLowerCase().includes(qText);
-      const matchIMO = q.imoNumber.toLowerCase().includes(qText);
-      const matchCompany = q.companyName.toLowerCase().includes(qText);
-      const matchId = q.id.toLowerCase().includes(qText);
-      if (!matchVessel && !matchIMO && !matchCompany && !matchId) return false;
-    }
-    return true;
-  });
-
-  const countPending = quotes.filter((q) => q.status === 'New' || q.status === 'In Review').length;
-  const countQuoted = quotes.filter((q) => q.status === 'Quoted (60m)').length;
-  const countDispatched = quotes.filter((q) => q.status === 'Dispatched').length;
-  const totalValueUSD = quotes.reduce((acc, curr) => acc + (curr.quotedAmountUSD || 0), 0);
-
+  // 2. AUTHENTICATED OPERATIONS COMMAND CENTER (EXACT BLUEPRINT PANEL 8)
   return (
-    <div className="w-full min-h-screen bg-[#071322] text-slate-200 pb-20 font-sans" id="admin-operations-desk">
-      {/* Toast Alert */}
+    <div className="w-full bg-[#0B2545] text-slate-100 min-h-screen pb-16 font-sans select-none" id="admin-analytics-desk">
+      {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed top-24 right-6 z-50 bg-[#0B2545] border border-amber-400 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in">
-          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="text-xs font-semibold">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white ml-2">
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="fixed top-20 right-6 z-50 bg-emerald-900 border border-emerald-400 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* 1. TOP MARITIME COMMAND BAR */}
-      <div className="bg-[#0A192F] border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Station Identity & Officer */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center font-cinzel shadow-sm">
-              {currentUser.avatarInitials || 'TM'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <strong className="text-white text-sm tracking-wide">
-                  {currentUser.name}
-                </strong>
-                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
-                  Duty Officer
-                </span>
-                <span className="text-slate-400 text-xs hidden sm:inline-block">
-                  • Port Tawfik HQ & Suez Anchorage Dispatch
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
-                <span className="flex items-center gap-1 text-emerald-400 font-mono">
-                  <Radio className="w-3 h-3 animate-pulse" />
-                  <span>Suez Station: {suezTime} (UTC+2)</span>
-                </span>
-                <span className="text-slate-600">|</span>
-                <span className="font-mono text-slate-300">ZULU: {zuluTime}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* System Status, Sync & Actions */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Supabase Status Indicator */}
+      {/* NAVIGATION TABS (MATCHING BLUEPRINT PANEL 8: Dashboard, RFQs, Quotes, Orders, Customers, Inquiries) */}
+      <div className="border-b border-white/10 bg-[#081B33] sticky top-0 z-30 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 py-2">
+          <div className="flex items-center gap-1 overflow-x-auto py-1 text-xs font-bold scrollbar-none">
             <button
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              type="button"
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                dbStatus?.configured
-                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
-                  : 'bg-amber-950/70 border-amber-500/40 text-amber-300 hover:bg-amber-900/60'
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
+                activeTab === 'dashboard'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
-              title="PostgreSQL Cloud Synchronization Status"
             >
-              <span className={`w-2 h-2 rounded-full ${dbStatus?.configured ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
-              <span>{isSyncing ? 'Syncing...' : (dbStatus?.configured ? `Supabase Live (${dbStatus.count})` : 'Offline')}</span>
-              <RefreshCw className={`w-3 h-3 text-emerald-400 ml-0.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            </button>
-
-            {/* Language Switcher in Admin */}
-            <button
-              type="button"
-              onClick={() => languageStore.setLanguage(currentLang === 'en' ? 'ar' : 'en')}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1"
-            >
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
-              <span>{currentLang === 'en' ? 'العربية' : 'EN'}</span>
+              <BarChart2 className="w-4 h-4 text-sky-400" />
+              <span>Analytics Overview</span>
             </button>
 
             <button
-              onClick={handleExportCSV}
-              type="button"
-              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white font-medium px-3 py-1.5 rounded-xl text-xs border border-slate-700 transition-colors"
+              onClick={() => setActiveTab('rfqs')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 relative ${
+                activeTab === 'rfqs'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
-              <span>Export Registry</span>
+              <Ship className="w-4 h-4 text-emerald-400" />
+              <span>Live RFQs</span>
+              {quotes.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px]">
+                  {quotes.length}
+                </span>
+              )}
             </button>
 
-            <button
-              onClick={handleSignOut}
-              type="button"
-              className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-950/70 border border-red-800/40 font-semibold px-3 py-1.5 rounded-xl transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. EXECUTIVE METRIC KPI CARDS */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-[#0B1E36] border border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Active Requisitions
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-white">{quotes.length}</span>
-              <span className="text-xs text-slate-400">Total Indents</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">Suez Canal & Major Ports</div>
-          </div>
-
-          <div className="bg-[#0B1E36] border border-amber-500/40 p-4 rounded-2xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-                Pending Quotations
-              </span>
-              <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-amber-300">{countPending}</span>
-              <span className="text-xs text-amber-400 font-bold">&lt; 60m SLA</span>
-            </div>
-            <div className="mt-2 text-[11px] text-amber-200/80">Requires Pricing Dispatch</div>
-          </div>
-
-          <div className="bg-[#0B1E36] border border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">
-                Quoted & Dispatched
-              </span>
-              <Ship className="w-4 h-4 text-sky-400" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-sky-300">{countQuoted + countDispatched}</span>
-              <span className="text-xs text-slate-400">In Pipeline</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">Harbor Launch Coordination</div>
-          </div>
-
-          <div className="bg-[#0B1E36] border border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-              Quoted Pipeline Volume
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-300">
-                ${Math.round(totalValueUSD).toLocaleString()}
-              </span>
-              <span className="text-xs text-slate-400">USD</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">Verified Indent Volume</div>
-          </div>
-        </div>
-
-        {/* 3. TABS NAVIGATION */}
-        <div className="mt-6 border-b border-slate-800 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('quotes')}
-              className={`px-4 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
                 activeTab === 'quotes'
-                  ? 'border-amber-400 text-amber-300'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Ship className="w-4 h-4" />
-              <span>Vessel Requisitions & Indents ({quotes.length})</span>
+              <DollarSign className="w-4 h-4 text-amber-400" />
+              <span>Pricing & Quotations</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
+                activeTab === 'orders'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-4 h-4 text-purple-400" />
+              <span>Active Orders ({activeOrdersCount})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
+                activeTab === 'customers'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4 text-teal-400" />
+              <span>Top Customers</span>
             </button>
 
             <button
               onClick={() => setActiveTab('inquiries')}
-              className={`px-4 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
                 activeTab === 'inquiries'
-                  ? 'border-amber-400 text-amber-300'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  ? 'bg-white/15 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>Port & General Inquiries ({inquiries.length})</span>
+              <Mail className="w-4 h-4 text-sky-400" />
+              <span>Contact Messages ({inquiries.length})</span>
+            </button>
+          </div>
+
+          {/* Right Controls: Sync & Logout */}
+          <div className="flex items-center justify-end gap-2 shrink-0">
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-2 rounded-lg border border-white/15 transition-colors font-semibold"
+              title="Sync with Database"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-300 hover:text-white text-xs px-3 py-2 rounded-lg border border-red-500/30 transition-colors font-semibold"
+              title="Logout from Operations Desk"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
           </div>
         </div>
+      </div>
 
-        {/* 4. REQUISITIONS TABLE VIEW */}
-        {activeTab === 'quotes' && (
-          <div className="mt-5 space-y-4">
-            {/* Filter and Search Bar */}
-            <div className="bg-[#0B1E36] border border-slate-800 p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search by vessel, IMO, or port..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
-                />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+        {/* TOP KPI ROW (EXACT BLUEPRINT PANEL 8: Today's Overview) */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5 text-sky-400" />
+              <span>Today's Overview (Live Port Activity)</span>
+            </h2>
+            <span className="text-[11px] text-emerald-400 font-mono">
+              Live AIS & Radar Sweep Active
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {/* 1. Vessels Detected */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">Vessels Detected</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-white font-cinzel block mt-1">
+                {vesselsDetectedCount}
+              </span>
+              <span className="text-[10px] text-sky-400 mt-1 block">Suez & Waiting Area</span>
+            </div>
+
+            {/* 2. Leads Contacted */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">Leads Contacted</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-sky-300 font-cinzel block mt-1">
+                {leadsContactedCount}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-1 block">Via AIS & Email</span>
+            </div>
+
+            {/* 3. Replies */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">Replies</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-cinzel block mt-1">
+                {repliesCount}
+              </span>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">38% Response Rate</span>
+            </div>
+
+            {/* 4. RFQs */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">RFQs</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-cinzel block mt-1">
+                {rfqsCount}
+              </span>
+              <span className="text-[10px] text-amber-300/80 mt-1 block">Under 60-Min SLA</span>
+            </div>
+
+            {/* 5. Orders */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">Orders</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-purple-400 font-cinzel block mt-1">
+                {activeOrdersCount}
+              </span>
+              <span className="text-[10px] text-purple-300/80 mt-1 block">In Port Clearance</span>
+            </div>
+
+            {/* 6. Est. Revenue */}
+            <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
+              <span className="text-[11px] font-semibold text-slate-400 block">Est. Revenue</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-cinzel block mt-1">
+                ${estRevenueSum.toLocaleString()}
+              </span>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">USD Billed Today</span>
+            </div>
+          </div>
+        </div>
+
+        {/* MIDDLE ROW (EXACT BLUEPRINT PANEL 8: Donut Chart Vessels by Type + Bar Chart Monthly Orders) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT: VESSELS BY TYPE (DONUT CHART) */}
+          <div className="lg:col-span-6 bg-[#102C4E] border border-white/10 rounded-2xl p-6 shadow-md space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-sky-400" />
+                <h3 className="text-sm font-bold text-white font-cinzel">Vessels by Type</h3>
+              </div>
+              <span className="text-xs text-slate-400">Canal Convoy Distribution</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-around gap-6 pt-2">
+              {/* SVG Donut Chart */}
+              <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  {/* Container 40% (Sky) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#38bdf8"
+                    strokeWidth="14"
+                    strokeDasharray="95.5 143.2"
+                    strokeDashoffset="0"
+                  />
+                  {/* Bulk Carrier 25% (Amber) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#f59e0b"
+                    strokeWidth="14"
+                    strokeDasharray="59.7 179"
+                    strokeDashoffset="-95.5"
+                  />
+                  {/* Tanker 15% (Rose) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#f43f5e"
+                    strokeWidth="14"
+                    strokeDasharray="35.8 202.9"
+                    strokeDashoffset="-155.2"
+                  />
+                  {/* General Cargo 12% (Emerald) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#10b981"
+                    strokeWidth="14"
+                    strokeDasharray="28.6 210.1"
+                    strokeDashoffset="-191"
+                  />
+                  {/* Other 8% (Slate) */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#94a3b8"
+                    strokeWidth="14"
+                    strokeDasharray="19.1 219.6"
+                    strokeDashoffset="-219.6"
+                  />
+                </svg>
+
+                {/* Inner center text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <span className="text-xl font-extrabold text-white font-cinzel">47</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Vessels</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                {['ALL', 'New', 'In Review', 'Quoted (60m)', 'Dispatched', 'Delivered'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                      statusFilter === st
-                        ? 'bg-amber-500 text-slate-950 font-bold'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+              {/* Legends matching blueprint values */}
+              <div className="space-y-2 text-xs w-full max-w-xs">
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
+                    <span className="text-slate-300">Container Ship</span>
+                  </div>
+                  <strong className="text-white font-mono font-bold">40%</strong>
+                </div>
+
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
+                    <span className="text-slate-300">Bulk Carrier</span>
+                  </div>
+                  <strong className="text-white font-mono font-bold">25%</strong>
+                </div>
+
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span>
+                    <span className="text-slate-300">Crude/Product Tanker</span>
+                  </div>
+                  <strong className="text-white font-mono font-bold">15%</strong>
+                </div>
+
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+                    <span className="text-slate-300">General Cargo</span>
+                  </div>
+                  <strong className="text-white font-mono font-bold">12%</strong>
+                </div>
+
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></span>
+                    <span className="text-slate-300">Other (Tugs, LNG)</span>
+                  </div>
+                  <strong className="text-white font-mono font-bold">8%</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: MONTHLY ORDERS (BAR CHART) */}
+          <div className="lg:col-span-6 bg-[#102C4E] border border-white/10 rounded-2xl p-6 shadow-md space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white font-cinzel">Monthly Orders</h3>
+              </div>
+              <span className="text-xs text-emerald-400 font-mono font-semibold">+34% YOY Growth</span>
+            </div>
+
+            {/* Custom SVG/HTML Bar chart for Jan - Jun */}
+            <div className="pt-4 space-y-3">
+              <div className="h-44 flex items-end justify-between gap-3 sm:gap-6 px-2 border-b border-white/15 pb-2">
+                {/* Jan */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">18</span>
+                  <div className="w-full bg-sky-500/40 group-hover:bg-sky-400 transition-all rounded-t-md h-[40%]"></div>
+                  <span className="text-[11px] text-slate-400 font-bold">Jan</span>
+                </div>
+
+                {/* Feb */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">24</span>
+                  <div className="w-full bg-sky-500/50 group-hover:bg-sky-400 transition-all rounded-t-md h-[52%]"></div>
+                  <span className="text-[11px] text-slate-400 font-bold">Feb</span>
+                </div>
+
+                {/* Mar */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">32</span>
+                  <div className="w-full bg-sky-500/60 group-hover:bg-sky-400 transition-all rounded-t-md h-[68%]"></div>
+                  <span className="text-[11px] text-slate-400 font-bold">Mar</span>
+                </div>
+
+                {/* Apr */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">28</span>
+                  <div className="w-full bg-sky-500/60 group-hover:bg-sky-400 transition-all rounded-t-md h-[60%]"></div>
+                  <span className="text-[11px] text-slate-400 font-bold">Apr</span>
+                </div>
+
+                {/* May */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-amber-300 opacity-0 group-hover:opacity-100 transition-opacity">41</span>
+                  <div className="w-full bg-amber-400 group-hover:bg-amber-300 transition-all rounded-t-md h-[86%] shadow-xs"></div>
+                  <span className="text-[11px] text-amber-300 font-bold">May</span>
+                </div>
+
+                {/* Jun */}
+                <div className="flex-1 flex flex-col items-center gap-2 group">
+                  <span className="text-[10px] font-mono text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity">47</span>
+                  <div className="w-full bg-emerald-400 group-hover:bg-emerald-300 transition-all rounded-t-md h-[98%] shadow-xs"></div>
+                  <span className="text-[11px] text-emerald-300 font-bold">Jun</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 px-2">
+                <span>Peak Convoy Season</span>
+                <span>Average Value: <strong>$14,200 / Vessel</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM ROW (EXACT BLUEPRINT PANEL 8: Recent RFQs Left Table + Top Customers Right Table) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT: RECENT RFQS TABLE */}
+          <div className="lg:col-span-8 bg-[#102C4E] border border-white/10 rounded-2xl p-6 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white font-cinzel">Recent RFQs</h3>
+                <span className="text-xs text-slate-400 font-mono">({filteredQuotes.length} active)</span>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center gap-2 text-xs">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-[#0B2545] border border-white/15 rounded-lg px-2.5 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="New">New</option>
+                  <option value="In Review">In Review</option>
+                  <option value="Quoted (60m)">Quoted (60m)</option>
+                  <option value="Order Confirmed">Order Confirmed</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
               </div>
             </div>
 
             {/* Table */}
-            <div className="bg-[#0B1E36] border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#08172A] text-slate-400 uppercase tracking-wider font-mono border-b border-slate-800">
-                    <tr>
-                      <th className="py-3.5 px-4">Vessel & IMO</th>
-                      <th className="py-3.5 px-4">Port / ETA</th>
-                      <th className="py-3.5 px-4">Services / Items</th>
-                      <th className="py-3.5 px-4">Priority</th>
-                      <th className="py-3.5 px-4">Quoted (USD)</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-200">
-                    {filteredQuotes.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400">
-                          No requisitions matching current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredQuotes.map((quote) => (
-                        <tr
-                          key={quote.id}
-                          className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                          onClick={() => setSelectedQuote(quote)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="text-[10px] uppercase font-bold text-slate-400 border-b border-white/10 bg-white/5">
+                  <tr>
+                    <th className="py-2.5 px-3">Vessel</th>
+                    <th className="py-2.5 px-3">Date / ETA</th>
+                    <th className="py-2.5 px-3">Category</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredQuotes.slice(0, 6).map((quote) => (
+                    <tr key={quote.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-white flex items-center gap-1.5">
+                          <Ship className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                          <span>{quote.vesselName}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          IMO {quote.imoNumber} • {quote.companyName}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="text-slate-200 font-medium">{quote.etaDate}</div>
+                        <div className="text-[10px] text-slate-400">{quote.portOfCall}</div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span className="text-[11px] text-slate-300">
+                          {quote.services.join(', ') || 'Provisions & Technical'}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            quote.status === 'Quoted (60m)'
+                              ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                              : quote.status === 'Order Confirmed'
+                              ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+                              : quote.status === 'Delivered'
+                              ? 'bg-blue-400/20 text-blue-300 border border-blue-400/30'
+                              : 'bg-white/10 text-slate-300'
+                          }`}
                         >
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
-                              <Ship className="w-3.5 h-3.5 text-amber-400" />
-                              <span>{quote.vesselName}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                              IMO {quote.imoNumber} • {quote.vesselType || 'Vessel'}
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate max-w-[180px]">
-                              {quote.companyName}
-                            </div>
-                          </td>
+                          {quote.status}
+                        </span>
+                      </td>
 
-                          <td className="py-3.5 px-4">
-                            <div className="font-medium text-slate-200">{quote.portOfCall}</div>
-                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
-                              <Calendar className="w-3 h-3 text-slate-400" />
-                              <span>{quote.etaDate} @ {quote.etaTime}</span>
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-1 flex-wrap max-w-xs">
-                              {quote.services?.slice(0, 2).map((s, idx) => (
-                                <span
-                                  key={idx}
-                                  className="bg-slate-800 border border-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded"
-                                >
-                                  {s}
-                                </span>
-                              ))}
-                              {quote.fileName && (
-                                <span className="bg-sky-950/70 text-sky-300 border border-sky-800/60 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
-                                  <FileText className="w-3 h-3" />
-                                  <span>{quote.fileName}</span>
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
-                                quote.priority.includes('Urgent') || quote.priority.includes('< 30')
-                                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                                  : 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                              }`}
-                            >
-                              {quote.priority}
-                            </span>
-                          </td>
-
-                          <td className="py-3.5 px-4 font-mono font-bold text-emerald-300">
-                            {quote.quotedAmountUSD ? `$${quote.quotedAmountUSD.toLocaleString()}` : (
-                              <span className="text-slate-500 font-normal italic">Awaiting Pricing</span>
-                            )}
-                          </td>
-
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                                quote.status === 'DELIVERED'
-                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                  : quote.status === 'QUOTED'
-                                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                                  : quote.status === 'DISPATCHED'
-                                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              }`}
-                            >
-                              {quote.status.replace('_', ' ')}
-                            </span>
-                          </td>
-
-                          <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => setSelectedQuote(quote)}
-                              className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs transition-colors"
-                            >
-                              Inspect / Price
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedQuote(quote)}
+                          className="bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 hover:text-white px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors"
+                        >
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
 
-        {/* 5. GENERAL INQUIRIES TAB */}
-        {activeTab === 'inquiries' && (
-          <div className="mt-5 bg-[#0B1E36] border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#08172A] text-slate-400 uppercase tracking-wider font-mono border-b border-slate-800">
-                <tr>
-                  <th className="py-3.5 px-4">Ref</th>
-                  <th className="py-3.5 px-4">Contact</th>
-                  <th className="py-3.5 px-4">Company</th>
-                  <th className="py-3.5 px-4">Subject</th>
-                  <th className="py-3.5 px-4">Received</th>
-                  <th className="py-3.5 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-200">
-                {inquiries.map((inq) => (
-                  <tr key={inq.id} className="hover:bg-slate-800/50">
-                    <td className="py-3.5 px-4 font-mono text-slate-400">{inq.id}</td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-white">{inq.name}</div>
-                      <div className="text-[11px] text-slate-400">{inq.email}</div>
-                    </td>
-                    <td className="py-3.5 px-4">{inq.company || 'Direct Contact'}</td>
-                    <td className="py-3.5 px-4 max-w-sm">
-                      <div className="font-semibold text-slate-200">{inq.subject}</div>
-                      <div className="text-[11px] text-slate-400 truncate">{inq.message}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400">{inq.createdAt.slice(0, 10)}</td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {inq.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* RIGHT: TOP CUSTOMERS TABLE */}
+          <div className="lg:col-span-4 bg-[#102C4E] border border-white/10 rounded-2xl p-6 shadow-md space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white font-cinzel">Top Customers</h3>
+              </div>
+              <span className="text-xs text-slate-400">Total Billed</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {topCustomers.map((cust, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">{cust.flag}</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{cust.name}</h4>
+                      <span className="text-[10px] text-slate-400">{cust.volume} Total volume</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs font-bold font-mono text-amber-400 block">
+                      {cust.orders} Orders
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      {cust.rating}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* 6. INSPECTION & OPERATIONAL PRICING DRAWER */}
+      {/* MODAL: QUOTE PRICING & DISPATCH DRAWER */}
       {selectedQuote && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end animate-in fade-in">
-          <div className="w-full max-w-2xl bg-[#0B1E36] border-l border-slate-700 h-full overflow-y-auto p-6 text-slate-200 flex flex-col justify-between shadow-2xl">
-            <div>
-              {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
-                    <Ship className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white font-cinzel">
-                      {selectedQuote.vesselName}
-                    </h2>
-                    <p className="text-xs text-slate-400 font-mono">
-                      Ref: {selectedQuote.id} • IMO: {selectedQuote.imoNumber}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedQuote(null)}
-                  className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Status Progression Pipeline */}
-              <div className="mt-5 bg-[#08172A] p-4 rounded-xl border border-slate-800">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2.5">
-                  Operational Progression Pipeline
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {(['New', 'In Review', 'Quoted (60m)', 'Dispatched', 'Delivered'] as RFQStatus[]).map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => handleStatusChange(st)}
-                      className={`py-2 px-2 rounded-lg text-xs font-bold text-center border transition-all ${
-                        selectedQuote.status === st
-                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Vessel Indent Details */}
-              <div className="mt-5 space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-                  <div>
-                    <span className="text-slate-400">Port of Call:</span>
-                    <strong className="block text-white text-sm mt-0.5">{selectedQuote.portOfCall}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Expected Arrival (ETA):</span>
-                    <strong className="block text-white text-sm mt-0.5">{selectedQuote.etaDate} @ {selectedQuote.etaTime}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Superintendent / Contact:</span>
-                    <strong className="block text-white text-sm mt-0.5">{selectedQuote.contactName} ({selectedQuote.companyName})</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Official Contact:</span>
-                    <strong className="block text-white text-sm mt-0.5">{selectedQuote.contactPhone}</strong>
-                  </div>
-                </div>
-
-                {/* Pricing & Harbor Launch Dispatch Form */}
-                <div className="bg-[#08172A] p-4 rounded-xl border border-slate-800 space-y-3">
-                  <h3 className="font-bold text-amber-300 text-xs uppercase tracking-wider">
-                    Officer Pricing & Launch Dispatch
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#0B2545] border border-white/20 rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-100 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <Ship className="w-6 h-6 text-amber-400" />
+                <div>
+                  <h3 className="text-lg font-bold text-white font-cinzel">
+                    Manage RFQ: {selectedQuote.vesselName}
                   </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Ref: {selectedQuote.id} • IMO: {selectedQuote.imoNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedQuote(null)}
+                className="text-slate-400 hover:text-white font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">
-                        Quoted Total (USD $)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 14250"
-                        value={editQuotedAmount}
-                        onChange={(e) => setEditQuotedAmount(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-emerald-300 font-mono font-bold focus:outline-none focus:border-amber-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">
-                        Assigned Harbor Launch
-                      </label>
-                      <select
-                        value={editLaunchBoat}
-                        onChange={(e) => setEditLaunchBoat(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-amber-400"
-                      >
-                        <option value="Mentors Launch 01 (Port Tawfik)">Mentors Launch 01 (Port Tawfik)</option>
-                        <option value="Mentors Launch 02 (Cold Chain)">Mentors Launch 02 (Cold Chain)</option>
-                        <option value="Mentors Launch 03 (Technical Deck/Engine)">Mentors Launch 03 (Technical Spares)</option>
-                        <option value="Mentors Tug 04 (Outer Anchorage)">Mentors Tug 04 (Outer Anchorage)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
-                      Duty Officer Notes
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="Enter internal vessel clearance instructions, gangway coordinates, or dietary confirmations..."
-                      value={editAdminNotes}
-                      onChange={(e) => setEditAdminNotes(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-amber-400"
+            <form onSubmit={handleSaveQuoteDetails} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    Quoted Total Price (USD)
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="w-4 h-4 text-emerald-400 absolute left-3 top-2.5" />
+                    <input
+                      type="number"
+                      value={editQuotedAmount}
+                      onChange={(e) => setEditQuotedAmount(e.target.value)}
+                      placeholder="e.g. 14500"
+                      className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     />
                   </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      type="button"
-                      onClick={handleSaveDetails}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow"
-                    >
-                      Save Pricing & Notes to Supabase
-                    </button>
-
-                    <a
-                      href={generateWhatsAppLink(selectedQuote)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg font-bold text-xs transition-colors"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Send WhatsApp Dispatch</span>
-                    </a>
-                  </div>
                 </div>
 
-                {/* Items & Manifest */}
                 <div>
-                  <h4 className="font-bold text-slate-300 uppercase tracking-wider mb-2">
-                    Selected Requisition Indent Items ({selectedQuote.selectedItems?.length || 0})
-                  </h4>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                    {selectedQuote.selectedItems && selectedQuote.selectedItems.length > 0 ? (
-                      selectedQuote.selectedItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-800/50">
-                          <span>{item}</span>
-                          <span className="text-[10px] text-emerald-400 font-bold font-mono">CONFIRMED</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-slate-500 italic">No specific pre-selected checklist items.</span>
-                    )}
-                  </div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    Update RFQ Status
+                  </label>
+                  <select
+                    value={selectedQuote.status}
+                    onChange={(e) => handleStatusChange(selectedQuote.id, e.target.value as RFQStatus)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white font-bold focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  >
+                    <option value="New">New (Initial Submission)</option>
+                    <option value="In Review">In Review (Operations Desk)</option>
+                    <option value="Quoted (60m)">Quoted (60m) (Priced & Issued)</option>
+                    <option value="Order Confirmed">Order Confirmed (Master Approved)</option>
+                    <option value="Dispatched">Dispatched (Customs Free Zone / Launch Boat)</option>
+                    <option value="Delivered">Delivered (Completed at Anchorage/Berth)</option>
+                  </select>
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Actions */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                }}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white px-3 py-2 rounded-lg bg-slate-800"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Indent Voucher</span>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    Assigned Dispatch Officer
+                  </label>
+                  <input
+                    type="text"
+                    value={editOfficer}
+                    onChange={(e) => setEditOfficer(e.target.value)}
+                    placeholder="Capt. Tarek Mansour"
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedQuote(null)}
-                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs"
-              >
-                Close Drawer
-              </button>
-            </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    Port Launch Boat
+                  </label>
+                  <input
+                    type="text"
+                    value={editLaunchBoat}
+                    onChange={(e) => setEditLaunchBoat(e.target.value)}
+                    placeholder="Mentors Star I (Suez Anchorage)"
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">
+                  Customs & Operational Dispatch Notes
+                </label>
+                <textarea
+                  rows={3}
+                  value={editAdminNotes}
+                  onChange={(e) => setEditAdminNotes(e.target.value)}
+                  placeholder="HACCP certificate attached, bonded goods cleared with Port Said Customs..."
+                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuote(null)}
+                  className="px-4 py-2 text-slate-300 hover:text-white font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C81D25] hover:bg-[#a8161d] text-white px-5 py-2 rounded-xl font-bold transition-all shadow-md"
+                >
+                  Save Quotation & Issue to Client
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

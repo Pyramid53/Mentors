@@ -206,11 +206,10 @@ export const GetAQuotePage: React.FC = () => {
               </a>
 
               <Link
-                to="/track-vessel"
+                to="/services"
                 className="bg-[#0B2545] hover:bg-[#12345C] text-white font-bold text-sm px-5 py-2.5 rounded-lg flex items-center gap-2 shadow border border-sky-400/40"
               >
-                <Ship className="w-4 h-4 text-sky-300" />
-                <span>Track on Suez AIS Map →</span>
+                <span>View Marine Provisions Services →</span>
               </Link>
 
               <button

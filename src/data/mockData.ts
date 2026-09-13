@@ -1,4 +1,6 @@
 import { Vessel, ServiceDetail, PortLocation } from '../types';
+import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
+import mentorsProvisionDock from '../assets/images/mentors_provision_dock_1789321743086.jpg';
 
 export const MOCK_VESSELS: Vessel[] = [
   {
@@ -324,7 +326,7 @@ export const MOCK_PORTS: PortLocation[] = [
     servicesAvailable: ['Fresh Provisions', 'Bunkering Coordination', 'Technical Stores', 'Crew Launch Service', 'Bonded Stores'],
     avgLaunchTime: '15 - 30 Minutes',
     description: 'The historic southern gateway to the Suez Canal. Ideal for provisioning vessels anchored in North and South anchorages or preparing for northbound convoy transit.',
-    image: 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=900&q=80',
+    image: mentorsSupplyBoat,
   },
   {
     id: 'ain-sokhna',
@@ -335,7 +337,7 @@ export const MOCK_PORTS: PortLocation[] = [
     servicesAvailable: ['Container Vessel Supply', 'Dry Bulk Chandlery', 'Technical Spares', 'Chemical Tanker Servicing', 'Fresh Water'],
     avgLaunchTime: '20 - 40 Minutes',
     description: 'Egypt’s premier modern deepwater port on the western coast of the Gulf of Suez, accommodating the world’s largest container carriers and bulk vessels with direct quay delivery.',
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
+    image: mentorsProvisionDock,
   },
   {
     id: 'adabiya',

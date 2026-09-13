@@ -4,23 +4,11 @@ const CURRENT_USER_KEY = 'mentors_marine_active_user_v1';
 const REGISTERED_USERS_KEY = 'mentors_marine_users_db_v1';
 
 interface StoredUserRecord extends AppUser {
-  passwordHash: string;
+  passwordHash?: string;
 }
 
+// Default demo client (admin credentials are NEVER stored on client-side, only authenticated via database/API)
 const DEFAULT_USERS: StoredUserRecord[] = [
-  {
-    id: 'USR-ADM-01',
-    name: 'Capt. Tarek Mansour',
-    email: 'admin@mentors-marine.com',
-    company: 'Mentors Marine Services SAE',
-    role: 'admin',
-    title: 'Chief Suez Operations Superintendent',
-    phone: '+20 100 489 2210',
-    port: 'Port of Suez & Canal Waiting Area',
-    avatarInitials: 'TM',
-    createdAt: '2025-01-10T08:00:00Z',
-    passwordHash: 'admin123'
-  },
   {
     id: 'USR-CLT-01',
     name: 'Capt. Marco Rossi',
@@ -31,8 +19,7 @@ const DEFAULT_USERS: StoredUserRecord[] = [
     phone: '+39 340 551 2894',
     port: 'Suez Anchorage (V-Zone)',
     avatarInitials: 'MR',
-    createdAt: '2025-03-15T10:30:00Z',
-    passwordHash: 'client123'
+    createdAt: '2025-03-15T10:30:00Z'
   },
   {
     id: 'USR-CLT-02',
@@ -44,8 +31,7 @@ const DEFAULT_USERS: StoredUserRecord[] = [
     phone: '+47 902 33 412',
     port: 'Ain Sokhna & Suez',
     avatarInitials: 'SL',
-    createdAt: '2025-04-02T12:00:00Z',
-    passwordHash: 'shipping123'
+    createdAt: '2025-04-02T12:00:00Z'
   }
 ];
 
@@ -60,19 +46,6 @@ function notifyAuthListeners(user: AppUser | null) {
       console.error('Error in auth listener:', err);
     }
   });
-}
-
-function getStoredUsers(): StoredUserRecord[] {
-  try {
-    const raw = localStorage.getItem(REGISTERED_USERS_KEY);
-    if (!raw) {
-      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(DEFAULT_USERS));
-      return DEFAULT_USERS;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return DEFAULT_USERS;
-  }
 }
 
 export const authStore = {
@@ -95,114 +68,99 @@ export const authStore = {
     return user !== null && user.role === 'admin';
   },
 
-  login(email: string, password: string):{ success: boolean; error?: string; user?: AppUser } {
+  async login(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AppUser }> {
     const cleanEmail = email.trim().toLowerCase();
-    const users = getStoredUsers();
-    const matched = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    const cleanPassword = password.trim();
 
-    if (!matched) {
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
+      });
+
+      const data = await resp.json();
+
+      if (resp.ok && data.success && data.user) {
+        const safeUser: AppUser = data.user;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+        notifyAuthListeners(safeUser);
+        return {
+          success: true,
+          user: safeUser
+        };
+      }
+
       return {
         success: false,
-        error: 'No account registered with this email address. Please check your spelling or sign up.'
+        error: data.error || 'Authentication rejected. Please verify your credentials.'
       };
-    }
-
-    if (matched.passwordHash !== password.trim()) {
+    } catch (err: any) {
+      console.error('Auth request exception:', err);
       return {
         success: false,
-        error: 'Incorrect password. Please try again or use the demo login buttons.'
+        error: 'Unable to connect to authorization server. Please try again.'
       };
     }
-
-    const { passwordHash: _, ...safeUser } = matched;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-    notifyAuthListeners(safeUser);
-
-    return {
-      success: true,
-      user: safeUser
-    };
   },
 
-  signup(data: {
+  async signup(data: {
     name: string;
     email: string;
     password: string;
     company: string;
-    role: UserRole;
+    role?: UserRole;
     phone?: string;
-    staffCode?: string;
-  }): { success: boolean; error?: string; user?: AppUser } {
+  }): Promise<{ success: boolean; error?: string; user?: AppUser }> {
     const cleanEmail = data.email.trim().toLowerCase();
-    const users = getStoredUsers();
 
-    if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
-      return {
-        success: false,
-        error: 'An account already exists with this email. Please sign in.'
-      };
-    }
-
-    // If attempting to register as admin, require staff security code or pass verification
-    if (data.role === 'admin') {
-      const staffCode = data.staffCode?.trim().toUpperCase();
-      if (staffCode !== 'MENTORS2026' && staffCode !== 'SUEZADMIN') {
-        return {
-          success: false,
-          error: 'Invalid Mentors Marine staff security verification code. Only authorized dispatch officers may register as Admin.'
-        };
-      }
-    }
-
-    const initials = data.name
-      .split(' ')
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || 'MM';
-
-    const newUser: StoredUserRecord = {
-      id: `USR-${data.role.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: data.name.trim(),
-      email: cleanEmail,
-      company: data.company.trim(),
-      role: data.role,
-      title: data.role === 'admin' ? 'Operations Dispatch Officer' : 'Vessel Superintendent',
-      phone: data.phone?.trim() || '',
-      avatarInitials: initials,
-      createdAt: new Date().toISOString(),
-      passwordHash: data.password.trim()
-    };
-
-    const updatedUsers = [...users, newUser];
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updatedUsers));
-
-    // Sync to Supabase via backend API
     try {
-      fetch('/api/auth/register', {
+      const resp = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: data.name,
+          name: data.name.trim(),
           email: cleanEmail,
-          password: data.password,
-          company: data.company,
-          phone: data.phone,
-          role: data.role
+          password: data.password.trim(),
+          company: data.company.trim(),
+          phone: data.phone?.trim() || '',
+          role: 'client' // strictly client role for self-registration
         })
-      }).catch((err) => console.log('User sync skipped/offline:', err.message));
-    } catch (err) {
-      // safe fallback
+      });
+
+      const resData = await resp.json();
+
+      if (resp.ok && resData.success && resData.user) {
+        const safeUser: AppUser = {
+          id: resData.user.id,
+          name: resData.user.name,
+          email: resData.user.email,
+          company: resData.user.company,
+          role: 'client',
+          phone: resData.user.phone,
+          avatarInitials: resData.user.avatar_initials || 'MM',
+          createdAt: resData.user.created_at || new Date().toISOString()
+        };
+
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+        notifyAuthListeners(safeUser);
+        return {
+          success: true,
+          user: safeUser
+        };
+      }
+
+      return {
+        success: false,
+        error: resData.error || 'Registration failed.'
+      };
+    } catch (err: any) {
+      console.error('Registration exception:', err);
+      return {
+        success: false,
+        error: 'Registration service unavailable. Please check connectivity.'
+      };
     }
-
-    const { passwordHash: _, ...safeUser } = newUser;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-    notifyAuthListeners(safeUser);
-
-    return {
-      success: true,
-      user: safeUser
-    };
   },
 
   logout(): void {
@@ -210,20 +168,11 @@ export const authStore = {
     notifyAuthListeners(null);
   },
 
-  loginAsDemoAdmin(): AppUser {
-    const admin = DEFAULT_USERS[0];
-    const { passwordHash: _, ...safeUser } = admin;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-    notifyAuthListeners(safeUser);
-    return safeUser;
-  },
-
   loginAsDemoClient(): AppUser {
-    const client = DEFAULT_USERS[1];
-    const { passwordHash: _, ...safeUser } = client;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-    notifyAuthListeners(safeUser);
-    return safeUser;
+    const client = DEFAULT_USERS[0];
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(client));
+    notifyAuthListeners(client);
+    return client;
   },
 
   subscribe(listener: AuthListener): () => void {

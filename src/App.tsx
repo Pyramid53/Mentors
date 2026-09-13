@@ -4,7 +4,6 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { GetAQuotePage } from './pages/GetAQuotePage';
-import { TrackVesselPage } from './pages/TrackVesselPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { WhyUsPage } from './pages/WhyUsPage';
 import { ContactPage } from './pages/ContactPage';
@@ -34,7 +33,6 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/get-a-quote" element={<GetAQuotePage />} />
-            <Route path="/track-vessel" element={<TrackVesselPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/why-us" element={<WhyUsPage />} />
             <Route path="/contact" element={<ContactPage />} />

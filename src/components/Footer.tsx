@@ -19,6 +19,7 @@ import { authStore } from '../services/authStore';
 export const Footer: React.FC = () => {
   const [lang, setLang] = useState<Language>(languageStore.getLanguage());
   const [currentUser, setCurrentUser] = useState(authStore.getCurrentUser());
+  const [suezTime, setSuezTime] = useState<string>('');
 
   useEffect(() => {
     const unsubLang = languageStore.subscribe((l) => setLang(l));
@@ -29,10 +30,90 @@ export const Footer: React.FC = () => {
     };
   }, []);
 
+  // Live Suez Port Local Time (Africa/Cairo EET)
+  useEffect(() => {
+    const updateSuezClock = () => {
+      try {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Africa/Cairo',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+        setSuezTime(formatter.format(now));
+      } catch {
+        setSuezTime('24/7 LIVE');
+      }
+    };
+    updateSuezClock();
+    const timer = setInterval(updateSuezClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const isAr = lang === 'ar';
 
   return (
     <footer className="bg-[#081426] text-slate-300 border-t border-slate-800/80" id="main-footer">
+      {/* 1. SUEZ TELEMETRY & MARITIME DISPATCH STRIP */}
+      <div className="w-full bg-[#040B15] text-slate-300 text-xs border-b border-white/10 py-3">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-12">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+            {/* Left Telemetry: Suez Live Time & VHF */}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-[11px] sm:text-xs">
+              <div className="flex items-center gap-2 font-semibold text-emerald-400">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span className="font-mono tracking-wider uppercase text-slate-200">
+                  SUEZ EET (LOCAL TIME):{' '}
+                  <strong className="text-emerald-400 font-bold text-xs sm:text-sm">
+                    {suezTime || '24/7 LIVE'}
+                  </strong>
+                </span>
+              </div>
+
+              <span className="text-white/20 hidden sm:inline">|</span>
+
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Radio className="w-3.5 h-3.5 text-sky-400" />
+                <span className="font-medium">VHF Marine Watch: CH 16 / 73</span>
+                <span className="text-[10px] text-slate-400 hidden lg:inline">(Callsign: MENTORS SUEZ SUPPLY)</span>
+              </div>
+
+              <span className="text-white/20 hidden md:inline">|</span>
+
+              <div className="hidden md:flex items-center gap-1.5 text-amber-300/90 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>ISO 22000 & HACCP Certified Free Zone</span>
+              </div>
+            </div>
+
+            {/* Right Telemetry: Operations Hotline & Direct Email */}
+            <div className="flex items-center gap-4 text-[11px] sm:text-xs">
+              <a
+                href="mailto:ops@mentorsmarine.com"
+                className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5 text-sky-400" />
+                <span className="font-mono">ops@mentorsmarine.com</span>
+              </a>
+
+              <span className="text-white/20">|</span>
+
+              <a
+                href="tel:+201008924477"
+                className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-mono font-bold transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>+20 100 892 4477</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Upper CTA Banner */}
       <div className="bg-[#050D1A] border-b border-white/10 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -227,14 +308,6 @@ export const Footer: React.FC = () => {
                 </a>
               </div>
               <div className="pt-2 flex flex-col gap-1.5">
-                <Link
-                  to="/track-vessel"
-                  className="inline-flex items-center gap-1.5 text-xs text-sky-300 hover:text-white font-medium"
-                >
-                  <span>{isAr ? 'فتح رادار تتبع السفن' : 'Open Live Vessel Tracker'}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-
                 {/* Only visible if staff is logged in */}
                 {currentUser?.role === 'admin' && (
                   <Link

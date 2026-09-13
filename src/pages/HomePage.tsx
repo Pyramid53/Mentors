@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { VideoModal } from '../components/VideoModal';
 import { languageStore, Language } from '../services/languageStore';
+import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
+import mentorsProvisionDock from '../assets/images/mentors_provision_dock_1789321743086.jpg';
 
 export const HomePage: React.FC = () => {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -40,9 +42,10 @@ export const HomePage: React.FC = () => {
         {/* Maritime Vessel Background Image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=2000&q=80"
-            alt="Suez Canal vessel supply and port operations"
-            className="w-full h-full object-cover object-center brightness-[0.4] contrast-125"
+            src={mentorsSupplyBoat}
+            alt="Mentors Marine vessel supply boat operating in the Suez Canal"
+            className="w-full h-full object-cover object-center brightness-[0.45] contrast-125"
+            referrerPolicy="no-referrer"
           />
           {/* Subtle Deep Navy Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#07172C] via-[#07172C]/85 to-transparent"></div>
@@ -101,11 +104,11 @@ export const HomePage: React.FC = () => {
               </Link>
 
               <Link
-                to="/track-vessel"
+                to="/services"
                 className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-sm sm:text-base px-6 py-3.5 rounded-xl border border-white/30 backdrop-blur-md transition-all active:scale-95"
               >
-                <Ship className="w-4 h-4 text-sky-300" />
-                <span>{languageStore.t('hero_cta_track')}</span>
+                <Package className="w-4 h-4 text-sky-300" />
+                <span>{languageStore.t('nav_services')}</span>
               </Link>
 
               <button
@@ -329,9 +332,10 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-6 relative">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200">
                 <img
-                  src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80"
-                  alt="Maritime supply logistics"
+                  src={mentorsProvisionDock}
+                  alt="Mentors Marine provisions supply vessel and harbor loading dock"
                   className="w-full h-[400px] object-cover"
+                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B2545]/80 via-transparent to-transparent"></div>
                 <div className="absolute bottom-6 left-6 right-6 text-white">
