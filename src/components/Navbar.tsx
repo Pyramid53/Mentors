@@ -109,10 +109,10 @@ export const Navbar: React.FC<NavbarProps> = () => {
             </div>
             <div className="flex flex-col justify-center">
               <span className="font-extrabold text-lg sm:text-xl xl:text-2xl tracking-wide text-[#0B2545] font-cinzel leading-none whitespace-nowrap">
-                MENTORS MARINE
+                {isRTL ? 'MENTORS MARINE' : 'MENTORS MARINE'}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] text-[#C81D25] uppercase leading-tight mt-1 whitespace-nowrap">
-                SHIP CHANDLERS & PROVISIONS
+              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#C81D25] uppercase leading-tight mt-1 whitespace-nowrap">
+                {isRTL ? 'تموين وتوريدات السفن البحرية' : 'SHIP CHANDLERS & PROVISIONS'}
               </span>
             </div>
           </Link>
@@ -345,8 +345,8 @@ export const Navbar: React.FC<NavbarProps> = () => {
                   </div>
                   <span className="truncate whitespace-nowrap">{currentUser.name.split(' ')[0]}</span>
                   {currentUser.role === 'admin' && (
-                    <span className="bg-amber-400 text-slate-950 text-[9px] uppercase px-1 py-0.2 rounded font-black whitespace-nowrap">
-                      Staff
+                    <span className="bg-amber-400 text-slate-950 text-[9px] uppercase px-1.5 py-0.5 rounded font-black whitespace-nowrap">
+                      {isRTL ? 'طاقم العمل' : 'Staff'}
                     </span>
                   )}
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -376,7 +376,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
                         >
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             <LayoutDashboard className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span className="whitespace-nowrap">Operations Admin</span>
+                            <span className="whitespace-nowrap">{isRTL ? 'مكتب العمليات' : 'Operations Admin'}</span>
                           </div>
                           {unreadCount.total > 0 && (
                             <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full whitespace-nowrap">
@@ -401,7 +401,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
                         className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 text-slate-700 font-medium whitespace-nowrap"
                       >
                         <Package className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span className="whitespace-nowrap">New Requisition</span>
+                        <span className="whitespace-nowrap">{languageStore.t('nav_new_requisition')}</span>
                       </Link>
                     </div>
 
@@ -427,7 +427,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 to="/client-portal"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-700 hover:text-[#0B2545] hover:bg-slate-100/90 border border-slate-200/90 shadow-2xs active:scale-[0.98] whitespace-nowrap shrink-0"
                 id="main-signin-btn"
-                title="Client Portal Sign In"
+                title={isRTL ? "تسجيل الدخول" : "Login"}
               >
                 <User className="w-4 h-4 text-slate-500 shrink-0" />
                 <span className="whitespace-nowrap">{languageStore.t('nav_portal')}</span>
@@ -524,7 +524,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
 
             {currentUser?.role === 'admin' && (
               <Link to="/admin" className="block py-2.5 text-amber-700 font-bold">
-                Operations Admin Desk (Staff)
+                {isRTL ? 'مكتب العمليات والموظفين' : 'Operations Admin Desk (Staff)'}
               </Link>
             )}
           </div>

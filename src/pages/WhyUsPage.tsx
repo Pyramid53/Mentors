@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import mentorsSupplyBoat from '../assets/images/mentors_supply_boat_1789321730085.jpg';
 import {
@@ -17,25 +17,39 @@ import {
   Sparkles
 } from 'lucide-react';
 import { MOCK_CERTIFICATIONS } from '../data/mockData';
+import { languageStore, Language } from '../services/languageStore';
 
 export const WhyUsPage: React.FC = () => {
+  const [currentLang, setCurrentLang] = useState<Language>(languageStore.getLanguage());
+
+  useEffect(() => {
+    const unsub = languageStore.subscribe((l) => setCurrentLang(l));
+    return () => unsub();
+  }, []);
+
+  const isAr = currentLang === 'ar';
+
   return (
-    <div className="w-full bg-white">
+    <div className="w-full bg-white font-sans" id="why-us-page">
       {/* 1. Page Header (Blueprint Page 5) */}
       <section className="py-12 sm:py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>The Mentors Difference</span>
+            <span>{isAr ? 'تميز مينتورز مارين' : 'The Mentors Difference'}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] font-cinzel tracking-tight">
-            Why Choose Mentors?
+            {isAr ? 'لماذا تختار مينتورز مارين؟' : 'Why Choose Mentors?'}
           </h1>
           <p className="text-slate-600 text-base sm:text-lg mt-3 font-medium">
-            We go beyond supply. We deliver peace of mind.
+            {isAr
+              ? 'نتجاوز مفهوم التوريد المعتاد... لنمنحك راحة البال وثقة الإبحار.'
+              : 'We go beyond supply. We deliver peace of mind.'}
           </p>
           <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-xl mx-auto">
-            From the moment your vessel enters Egyptian territorial waters to final receipt sign-off, our Suez operations hub ensures speed, transparency, and top-tier maritime provisioning.
+            {isAr
+              ? 'من لحظة دخول سفينتكم المياه الإقليمية المصرية وحتى التوقيع النهائي على إيصالات الاستلام، تضمن عملياتنا بالسويس السرعة والشفافية وأعلى معايير التموين البحري.'
+              : 'From the moment your vessel enters Egyptian territorial waters to final receipt sign-off, our Suez operations hub ensures speed, transparency, and top-tier maritime provisioning.'}
           </p>
         </div>
       </section>
@@ -50,13 +64,15 @@ export const WhyUsPage: React.FC = () => {
                 <Clock className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                Fast Quotation
+                {isAr ? 'عروض أسعار سريعة' : 'Fast Quotation'}
               </h3>
               <span className="text-xs font-bold text-[#D0201E] uppercase tracking-wider block mb-2">
-                Within 60 Minutes
+                {isAr ? 'خلال 60 دقيقة فقط' : 'Within 60 Minutes'}
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                We understand maritime convoy urgency. Our dedicated pricing desk processes vessel requisitions and provides comprehensive, competitive quotations within an hour.
+                {isAr
+                  ? 'ندرك تماماً أهمية الوقت ودقة مواعيد قوافل الملاحة. يعالج مكتب التسعير المتخصص طلبات التموين ويقدم عروض أسعار تفصيلية ومنافسة خلال 60 دقيقة.'
+                  : 'We understand maritime convoy urgency. Our dedicated pricing desk processes vessel requisitions and provides comprehensive, competitive quotations within an hour.'}
               </p>
             </div>
 
@@ -66,13 +82,15 @@ export const WhyUsPage: React.FC = () => {
                 <Radio className="w-7 h-7 animate-pulse" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                24/7 Support
+                {isAr ? 'دعم عملياتي على مدار 24/7' : '24/7 Support'}
               </h3>
               <span className="text-xs font-bold text-sky-700 uppercase tracking-wider block mb-2">
-                Always Available
+                {isAr ? 'جاهزية واتصال دائم' : 'Always Available'}
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                Vessels do not sleep, and neither do we. Our Port Tawfik desk operates 365 days a year with active VHF monitoring on Channel 16/73 and round-the-clock boarding officers.
+                {isAr
+                  ? 'الملاحة البحرية لا تتوقف، ونحن كذلك. يعمل مكتبنا في بورتوفيق 365 يوماً في السنة مع مراقبة لاسلكية مستمرة على قنوات VHF 16 / 73 وضباط صعود على مدار الساعة.'
+                  : 'Vessels do not sleep, and neither do we. Our Port Tawfik desk operates 365 days a year with active VHF monitoring on Channel 16/73 and round-the-clock boarding officers.'}
               </p>
             </div>
 
@@ -82,13 +100,15 @@ export const WhyUsPage: React.FC = () => {
                 <Award className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                High Quality
+                {isAr ? 'جودة طازجة ومعتمدة' : 'High Quality'}
               </h3>
               <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-2">
-                Fresh & Certified Products
+                {isAr ? 'منتجات ممتازة ومطابقة للمواصفات' : 'Fresh & Certified Products'}
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                Handpicked farm-fresh produce, USDA and Halal certified premium meats, and long-shelf-life dry stores maintained inside calibrated temperature-controlled cold chains.
+                {isAr
+                  ? 'خضروات وفواكه طازجة منتقاة بعناية، ولحوم معتمدة حلال ومطابقة لأعلى الاشتراطات الدولية، ومخازن جافة طويلة الصلاحية تُحفظ في سلسلة تبريد مضبوطة رقمياً.'
+                  : 'Handpicked farm-fresh produce, USDA and Halal certified premium meats, and long-shelf-life dry stores maintained inside calibrated temperature-controlled cold chains.'}
               </p>
             </div>
 
@@ -98,13 +118,15 @@ export const WhyUsPage: React.FC = () => {
                 <Compass className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                Strategic Location
+                {isAr ? 'موقع استراتيجي بالسويس' : 'Strategic Location'}
               </h3>
               <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block mb-2">
-                In the Heart of Suez
+                {isAr ? 'في قلب المدخل الملاحي' : 'In the Heart of Suez'}
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                Direct quayside berths and cold warehouses positioned at the entrance of the Suez Canal, serving Port Said, Great Bitter Lake, Adabiya, and Ain Sokhna without transit delays.
+                {isAr
+                  ? 'أرصفة بحرية مباشرة ومستودعات تبريد عند مدخل قناة السويس الجنوبي، تخدم بورسعيد، البحيرات المرة، الأدبية، والعين السخنة دون أي تعطيل لرحلة العبور.'
+                  : 'Direct quayside berths and cold warehouses positioned at the entrance of the Suez Canal, serving Port Said, Great Bitter Lake, Adabiya, and Ain Sokhna without transit delays.'}
               </p>
             </div>
 
@@ -114,13 +136,15 @@ export const WhyUsPage: React.FC = () => {
                 <ShieldCheck className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                Global Standards
+                {isAr ? 'معايير جودة دولية' : 'Global Standards'}
               </h3>
               <span className="text-xs font-bold text-purple-700 uppercase tracking-wider block mb-2">
                 HACCP, MLC 2006 & ISO 22000
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                Strict food safety hygiene protocols compliant with the Maritime Labour Convention (MLC 2006) Title 3.2, ensuring crew health and international port state inspection approval.
+                {isAr
+                  ? 'بروتوكولات نظافة وسلامة غذاء صارمة متوافقة مع اتفاقية العمل البحري (MLC 2006) البند 3.2 لضمان صحة الطواقم واجتياز تفتيش هيئات الموانئ الدولية بنجاح.'
+                  : 'Strict food safety hygiene protocols compliant with the Maritime Labour Convention (MLC 2006) Title 3.2, ensuring crew health and international port state inspection approval.'}
               </p>
             </div>
 
@@ -130,13 +154,15 @@ export const WhyUsPage: React.FC = () => {
                 <Users className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-[#0B2545] mb-2 font-cinzel">
-                Trusted Partner
+                {isAr ? 'شريك موثوق وطويل الأمد' : 'Trusted Partner'}
               </h3>
               <span className="text-xs font-bold text-teal-700 uppercase tracking-wider block mb-2">
-                Long-Term Relationships
+                {isAr ? 'علاقات شراكة ممتدة' : 'Long-Term Relationships'}
               </span>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                Trusted contract chandler for global shipping lines, ship managers, and catering management firms who depend on transparent billing and verified delivery notes.
+                {isAr
+                  ? 'مورد تموين معتمد لخطوط الشحن العالمية، ومديري الأساطيل، وشركات إدارة الإعاشة البحرية التي تعتمد على فواتير شفافة ومطابقة دقيقة لإيصالات الاستلام.'
+                  : 'Trusted contract chandler for global shipping lines, ship managers, and catering management firms who depend on transparent billing and verified delivery notes.'}
               </p>
             </div>
           </div>
@@ -157,49 +183,57 @@ export const WhyUsPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y lg:divide-y-0 lg:divide-x divide-white/20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-white/20">
             {/* Stat 1 */}
             <div className="pt-4 lg:pt-0">
-              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white font-cinzel block tracking-tight">
-                500+
+              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white font-cinzel block tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">500+</span>
               </span>
               <p className="text-sm sm:text-base font-bold text-sky-300 uppercase tracking-wider mt-2">
-                Vessels Supplied
+                {isAr ? 'سفينة تم تزويدها بالمؤن' : 'Vessels Supplied'}
               </p>
-              <p className="text-xs text-slate-300 mt-1">Suez Canal & Red Sea</p>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAr ? 'بقناة السويس والبحر الأحمر' : 'Suez Canal & Red Sea'}
+              </p>
             </div>
 
             {/* Stat 2 */}
             <div className="pt-4 lg:pt-0">
-              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white font-cinzel block tracking-tight">
-                50+
+              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white font-cinzel block tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">50+</span>
               </span>
               <p className="text-sm sm:text-base font-bold text-sky-300 uppercase tracking-wider mt-2">
-                Global Clients
+                {isAr ? 'عميل دولي دائم' : 'Global Clients'}
               </p>
-              <p className="text-xs text-slate-300 mt-1">Contracted fleet owners</p>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAr ? 'ملاك أساطيل وشركات إدارة' : 'Contracted fleet owners'}
+              </p>
             </div>
 
             {/* Stat 3 */}
             <div className="pt-4 lg:pt-0">
-              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#D0201E] font-cinzel block tracking-tight">
-                24/7
+              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#D0201E] font-cinzel block tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">24/7</span>
               </span>
               <p className="text-sm sm:text-base font-bold text-white uppercase tracking-wider mt-2">
-                On-Time Delivery
+                {isAr ? 'التزام تام بالمواعيد' : 'On-Time Delivery'}
               </p>
-              <p className="text-xs text-slate-300 mt-1">Convoys never delayed</p>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAr ? 'لا تأخير في قوافل العبور' : 'Convoys never delayed'}
+              </p>
             </div>
 
             {/* Stat 4 */}
             <div className="pt-4 lg:pt-0">
-              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-emerald-400 font-cinzel block tracking-tight">
-                0
+              <span className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-emerald-400 font-cinzel block tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">0</span>
               </span>
               <p className="text-sm sm:text-base font-bold text-emerald-300 uppercase tracking-wider mt-2">
-                Safety Incidents
+                {isAr ? 'حوادث سلامة بحرية' : 'Safety Incidents'}
               </p>
-              <p className="text-xs text-slate-300 mt-1">Perfect offshore record</p>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAr ? 'سجل تشغيلي بحري ناصع' : 'Perfect offshore record'}
+              </p>
             </div>
           </div>
         </div>
@@ -210,13 +244,15 @@ export const WhyUsPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="text-xs font-bold tracking-widest text-[#D0201E] uppercase">
-              International Audit & Compliance
+              {isAr ? 'التدقيق والامتثال الدولي' : 'International Audit & Compliance'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B2545] font-cinzel mt-1">
-              Accredited Quality & Safety Credentials
+              {isAr ? 'اعتمادات الجودة وسلامة الغذاء البحرية' : 'Accredited Quality & Safety Credentials'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 mt-2">
-              Every provision order is inspected, temperature-logged, and packaged in certified marine export crates.
+              {isAr
+                ? 'يتم فحص وتوثيق درجات حرارة كل طلب تموين وتغليفه في صناديق بحرية معتمدة للتصدير.'
+                : 'Every provision order is inspected, temperature-logged, and packaged in certified marine export crates.'}
             </p>
           </div>
 
@@ -233,14 +269,16 @@ export const WhyUsPage: React.FC = () => {
                   <h4 className="text-base font-bold text-[#0B2545] font-cinzel">
                     {cert.name}
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">{cert.category}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {isAr ? cert.categoryAr : cert.category}
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                      {cert.issuer}
+                      {isAr ? cert.issuerAr : cert.issuer}
                     </span>
                     <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" />
-                      <span>Verified</span>
+                      <span>{isAr ? 'معتمد وموثق' : 'Verified'}</span>
                     </span>
                   </div>
                 </div>
@@ -253,8 +291,8 @@ export const WhyUsPage: React.FC = () => {
               to="/get-a-quote"
               className="inline-flex items-center gap-2 bg-[#D0201E] hover:bg-[#b01716] text-white font-bold text-sm px-7 py-3 rounded-lg shadow-md transition-colors"
             >
-              <span>Experience Mentors Quality — Request a Quote</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{isAr ? 'جرّب جودة وسرعة مينتورز — اطلب عرض أسعار' : 'Experience Mentors Quality — Request a Quote'}</span>
+              <ArrowRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
             </Link>
           </div>
         </div>

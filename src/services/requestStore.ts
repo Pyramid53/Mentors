@@ -1,7 +1,105 @@
 import { QuoteFormData, ContactMessage, AdminQuoteRequest, AdminContactInquiry, RFQStatus, ContactStatus } from '../types';
+import { getSupabaseClient } from './supabaseClient';
 
 const QUOTES_KEY = 'mentors_admin_quotes_v1';
 const INQUIRIES_KEY = 'mentors_admin_inquiries_v1';
+
+function dbRowToQuote(r: any): AdminQuoteRequest {
+  return {
+    id: r.id,
+    submittedAt: r.submitted_at || r.created_at,
+    vesselName: r.vessel_name || '',
+    imoNumber: r.imo_number || '',
+    vesselType: r.vessel_type || 'Commercial Vessel',
+    portOfCall: r.port_of_call || 'Port of Suez',
+    etaDate: r.eta_date || '',
+    etaTime: r.eta_time || '',
+    services: r.services || [],
+    fileName: r.file_name,
+    fileSize: r.file_size,
+    selectedItems: r.selected_items || [],
+    crewNationalities: r.crew_nationalities,
+    priority: r.priority || 'Standard (60 Min)',
+    additionalNotes: r.additional_notes,
+    contactName: r.contact_name || '',
+    contactEmail: r.contact_email || '',
+    contactPhone: r.contact_phone || '',
+    companyName: r.company_name || '',
+    status: r.status || 'New',
+    assignedOfficer: r.assigned_officer || 'Capt. Tarek (Suez Desk)',
+    quotedAmountUSD: r.quoted_amount_usd ? Number(r.quoted_amount_usd) : undefined,
+    dispatchLaunchBoat: r.dispatch_launch_boat,
+    adminNotes: r.admin_notes,
+    lastUpdated: r.last_updated || 'Active'
+  };
+}
+
+function quoteToDbRow(q: AdminQuoteRequest) {
+  return {
+    id: q.id,
+    submitted_at: q.submittedAt || new Date().toISOString(),
+    vessel_name: q.vesselName || '',
+    imo_number: q.imoNumber || '',
+    vessel_type: q.vesselType || 'Commercial Vessel',
+    port_of_call: q.portOfCall || 'Port of Suez',
+    eta_date: q.etaDate || '',
+    eta_time: q.etaTime || '',
+    services: Array.isArray(q.services) ? q.services : [],
+    file_name: q.fileName || null,
+    file_size: q.fileSize || null,
+    selected_items: Array.isArray(q.selectedItems) ? q.selectedItems : [],
+    crew_nationalities: q.crewNationalities || null,
+    priority: q.priority || 'Standard (60 Min)',
+    additional_notes: q.additionalNotes || null,
+    contact_name: q.contactName || '',
+    contact_email: q.contactEmail || '',
+    contact_phone: q.contactPhone || '',
+    company_name: q.companyName || '',
+    status: q.status || 'New',
+    assigned_officer: q.assignedOfficer || 'Capt. Tarek (Suez Desk)',
+    quoted_amount_usd: q.quotedAmountUSD ? Number(q.quotedAmountUSD) : null,
+    dispatch_launch_boat: q.dispatchLaunchBoat || null,
+    admin_notes: q.adminNotes || null,
+    last_updated: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function dbRowToInquiry(r: any): AdminContactInquiry {
+  return {
+    id: r.id,
+    submittedAt: r.submitted_at || r.created_at,
+    fullName: r.full_name || '',
+    email: r.email || '',
+    phone: r.phone || '',
+    company: r.company || '',
+    inquiryType: r.inquiry_type || 'General Inquiries',
+    portOfCall: r.port_of_call || 'Port of Suez',
+    message: r.message || '',
+    status: r.status || 'New',
+    assignedTo: r.assigned_to || 'Duty Officer (Suez Operations)',
+    adminNotes: r.admin_notes
+  };
+}
+
+function inquiryToDbRow(i: AdminContactInquiry) {
+  return {
+    id: i.id,
+    submitted_at: i.submittedAt || new Date().toISOString(),
+    full_name: i.fullName || '',
+    email: i.email || '',
+    phone: i.phone || '',
+    company: i.company || '',
+    inquiry_type: i.inquiryType || 'General Inquiries',
+    port_of_call: i.portOfCall || 'Port of Suez',
+    message: i.message || '',
+    status: i.status || 'New',
+    assigned_to: i.assignedTo || 'Duty Officer (Suez Operations)',
+    admin_notes: i.adminNotes || null,
+    last_updated: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
 
 // Seed initial realistic data so admin desk is immediately rich and functional
 const INITIAL_QUOTES: AdminQuoteRequest[] = [
@@ -229,9 +327,19 @@ export const requestStore = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRecord)
-      }).catch((err) => console.log('API sync skipped/offline:', err.message));
-    } catch (err) {
-      // safe fallback
+      }).catch(() => {
+        // Fallback: direct Supabase if client-side keys are configured
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.from('quote_requests').upsert([quoteToDbRow(newRecord)], { onConflict: 'id' }).then();
+        }
+      });
+    } catch {
+      // Direct Supabase fallback
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.from('quote_requests').upsert([quoteToDbRow(newRecord)], { onConflict: 'id' }).then();
+      }
     }
 
     return newRecord;
@@ -256,15 +364,23 @@ export const requestStore = {
     }
     notifyListeners();
 
-    // Background sync to backend API
+    // Background sync to backend API or direct Supabase
     try {
       fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
-      }).catch((err) => console.log('API patch skipped/offline:', err.message));
-    } catch (err) {
-      // safe fallback
+      }).catch(() => {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.from('quote_requests').upsert([quoteToDbRow(updatedItem)], { onConflict: 'id' }).then();
+        }
+      });
+    } catch {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.from('quote_requests').upsert([quoteToDbRow(updatedItem)], { onConflict: 'id' }).then();
+      }
     }
 
     return updatedItem;
@@ -288,33 +404,77 @@ export const requestStore = {
     notifyListeners();
 
     try {
-      fetch(`/api/quotes/${id}`, { method: 'DELETE' }).catch((err) =>
-        console.log('Delete sync skipped/offline:', err.message)
-      );
-    } catch (err) {
-      // safe fallback
+      fetch(`/api/quotes/${id}`, { method: 'DELETE' }).catch(() => {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.from('quote_requests').delete().eq('id', id).then();
+        }
+      });
+    } catch {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.from('quote_requests').delete().eq('id', id).then();
+      }
     }
   },
 
   async refreshFromBackend(): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
+      let quotesSynced = false;
+      let inqSynced = false;
+
       const [quotesRes, inqRes] = await Promise.allSettled([
         fetch('/api/quotes'),
         fetch('/api/inquiries')
       ]);
 
       if (quotesRes.status === 'fulfilled' && quotesRes.value.ok) {
-        const json = await quotesRes.value.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          localStorage.setItem(QUOTES_KEY, JSON.stringify(json.data));
-        }
+        try {
+          const json = await quotesRes.value.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            localStorage.setItem(QUOTES_KEY, JSON.stringify(json.data));
+            quotesSynced = true;
+          }
+        } catch {}
       }
 
       if (inqRes.status === 'fulfilled' && inqRes.value.ok) {
-        const json = await inqRes.value.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          localStorage.setItem(INQUIRIES_KEY, JSON.stringify(json.data));
+        try {
+          const json = await inqRes.value.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            localStorage.setItem(INQUIRIES_KEY, JSON.stringify(json.data));
+            inqSynced = true;
+          }
+        } catch {}
+      }
+
+      // If server API was unavailable (static GitHub Pages hosting), query direct Supabase
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          if (!quotesSynced) {
+            const { data: qData } = await supabase
+              .from('quote_requests')
+              .select('*')
+              .order('submitted_at', { ascending: false });
+            if (qData && qData.length > 0) {
+              const mapped = qData.map(dbRowToQuote);
+              localStorage.setItem(QUOTES_KEY, JSON.stringify(mapped));
+            }
+          }
+          if (!inqSynced) {
+            const { data: iData } = await supabase
+              .from('contact_inquiries')
+              .select('*')
+              .order('submitted_at', { ascending: false });
+            if (iData && iData.length > 0) {
+              const mapped = iData.map(dbRowToInquiry);
+              localStorage.setItem(INQUIRIES_KEY, JSON.stringify(mapped));
+            }
+          }
+        } catch (dbErr) {
+          console.warn('Direct Supabase sync warning:', dbErr);
         }
       }
 
@@ -363,9 +523,17 @@ export const requestStore = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRecord)
-      }).catch((err) => console.log('Inquiry sync skipped/offline:', err.message));
-    } catch (err) {
-      // safe fallback
+      }).catch(() => {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.from('contact_inquiries').upsert([inquiryToDbRow(newRecord)], { onConflict: 'id' }).then();
+        }
+      });
+    } catch {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.from('contact_inquiries').upsert([inquiryToDbRow(newRecord)], { onConflict: 'id' }).then();
+      }
     }
 
     return newRecord;

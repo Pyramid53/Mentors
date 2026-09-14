@@ -67,9 +67,9 @@ export const Footer: React.FC = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
-                <span className="font-mono tracking-wider uppercase text-slate-200">
-                  SUEZ EET (LOCAL TIME):{' '}
-                  <strong className="text-emerald-400 font-bold text-xs sm:text-sm">
+                <span className="tracking-wider uppercase text-slate-200">
+                  {isAr ? 'توقيت السويس المحلي (EET): ' : 'SUEZ EET (LOCAL TIME): '}
+                  <strong dir="ltr" className="inline-block text-emerald-400 font-bold text-xs sm:text-sm font-mono unicode-isolate">
                     {suezTime || '24/7 LIVE'}
                   </strong>
                 </span>
@@ -79,15 +79,19 @@ export const Footer: React.FC = () => {
 
               <div className="flex items-center gap-1.5 text-slate-300">
                 <Radio className="w-3.5 h-3.5 text-sky-400" />
-                <span className="font-medium">VHF Marine Watch: CH 16 / 73</span>
-                <span className="text-[10px] text-slate-400 hidden lg:inline">(Callsign: MENTORS SUEZ SUPPLY)</span>
+                <span className="font-medium">
+                  {isAr ? 'مراقبة اللاسلكي: قنوات VHF 16 / 73' : 'VHF Marine Watch: CH 16 / 73'}
+                </span>
+                <span className="text-[10px] text-slate-400 hidden lg:inline">
+                  {isAr ? '(نداء العمليات: MENTORS SUEZ SUPPLY)' : '(Callsign: MENTORS SUEZ SUPPLY)'}
+                </span>
               </div>
 
               <span className="text-white/20 hidden md:inline">|</span>
 
               <div className="hidden md:flex items-center gap-1.5 text-amber-300/90 font-medium">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>ISO 22000 & HACCP Certified Free Zone</span>
+                <span>{isAr ? 'منطقة حرة معتمدة بشهادات ISO 22000 و HACCP' : 'ISO 22000 & HACCP Certified Free Zone'}</span>
               </div>
             </div>
 
@@ -96,6 +100,7 @@ export const Footer: React.FC = () => {
               <a
                 href="mailto:ops@mentorsmarine.com"
                 className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+                dir="ltr"
               >
                 <Mail className="w-3.5 h-3.5 text-sky-400" />
                 <span className="font-mono">ops@mentorsmarine.com</span>
@@ -105,10 +110,11 @@ export const Footer: React.FC = () => {
 
               <a
                 href="tel:+201008924477"
-                className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-mono font-bold transition-colors"
+                className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-bold transition-colors"
+                dir="ltr"
               >
                 <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>+20 100 892 4477</span>
+                <span className="font-mono inline-block unicode-isolate">+20 100 892 4477</span>
               </a>
             </div>
           </div>
@@ -293,13 +299,15 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-sky-400 shrink-0" />
-                <a href="tel:+201008924477" className="hover:text-white font-mono">
-                  +20 100 892 4477
+                <a href="tel:+201008924477" className="hover:text-white font-mono" dir="ltr">
+                  <span className="inline-block unicode-isolate">+20 100 892 4477</span>
                 </a>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="font-mono">+20 62 333 4567</span>
+                <span className="font-mono" dir="ltr">
+                  <span className="inline-block unicode-isolate">+20 62 333 4567</span>
+                </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-amber-400 shrink-0" />

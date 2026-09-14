@@ -32,11 +32,13 @@ import {
 } from 'lucide-react';
 import { authStore } from '../services/authStore';
 import { requestStore } from '../services/requestStore';
+import { languageStore, Language } from '../services/languageStore';
 import { AppUser, AdminQuoteRequest, UserRole } from '../types';
 
 export const ClientPortalPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AppUser | null>(authStore.getCurrentUser());
+  const [currentLang, setCurrentLang] = useState<Language>(languageStore.getLanguage());
 
   // Form tab & toggles
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -63,11 +65,51 @@ export const ClientPortalPage: React.FC = () => {
   const [selectedQuoteForModal, setSelectedQuoteForModal] = useState<AdminQuoteRequest | null>(null);
 
   useEffect(() => {
-    const unsub = authStore.subscribe((user) => {
+    const unsubAuth = authStore.subscribe((user) => {
       setCurrentUser(user);
     });
-    return () => unsub();
+    const unsubLang = languageStore.subscribe((lang) => {
+      setCurrentLang(lang);
+    });
+    return () => {
+      unsubAuth();
+      unsubLang();
+    };
   }, []);
+
+  const isAr = currentLang === 'ar';
+
+  const translateService = (s: string) => {
+    if (!isAr) return s;
+    const map: Record<string, string> = {
+      'Fresh Provisions': 'مؤن طازجة',
+      'Bonded Stores': 'بضائع معفاة جمركياً (بوندد)',
+      'Deck & Engine Stores': 'مهمات السطح والمحرك',
+      'Safety & Pyrotechnics': 'معدات السلامة والألعاب النارية',
+      'Cabin & Cleaning Supplies': 'مستلزمات الإعاشة والنظافة',
+      'Medical Supplies': 'أدوية ومستلزمات طبية',
+      'Technical Logistics': 'لوجستيات فنية وملاحة',
+      'Underwater Inspection': 'فحص تحت الماء'
+    };
+    return map[s] || s;
+  };
+
+  const translateStatus = (status: string) => {
+    if (!isAr) return status;
+    const map: Record<string, string> = {
+      'QUOTED': 'تم التسعير',
+      'APPROVED': 'معتمد',
+      'DELIVERED': 'تم التسليم',
+      'RECEIVED': 'مستلم',
+      'IN_CLEARANCE': 'قيد التخليص',
+      'New': 'جديد',
+      'In Review': 'قيد المراجعة',
+      'Quoted (60m)': 'تم التسعير (60 دقيقة)',
+      'Order Confirmed': 'تم تأكيد الطلب',
+      'Dispatched': 'تم الإرسال'
+    };
+    return map[status] || status;
+  };
 
   useEffect(() => {
     const loadQuotes = () => {
@@ -101,9 +143,9 @@ export const ClientPortalPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Login failed. Please verify credentials.');
+      setErrorMsg(isAr ? 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.' : (res.error || 'Login failed. Please verify credentials.'));
     } else {
-      setSuccessMsg(`Welcome back, ${res.user?.name}!`);
+      setSuccessMsg(isAr ? `مرحباً بعودتك، ${res.user?.name}!` : `Welcome back, ${res.user?.name}!`);
       if (res.user?.role === 'admin') {
         setTimeout(() => navigate('/admin'), 600);
       }
@@ -126,26 +168,26 @@ export const ClientPortalPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Registration failed.');
+      setErrorMsg(isAr ? 'فشل التسجيل. يرجى مراجعة البيانات والمحاولة مجدداً.' : (res.error || 'Registration failed.'));
     } else {
-      setSuccessMsg(`Account created successfully for ${res.user?.name}!`);
+      setSuccessMsg(isAr ? `تم إنشاء الحساب بنجاح للقبطان ${res.user?.name}!` : `Account created successfully for ${res.user?.name}!`);
     }
   };
 
   const handleLogout = () => {
     authStore.logout();
-    setSuccessMsg('You have been logged out securely.');
+    setSuccessMsg(isAr ? 'تم تسجيل الخروج بأمان.' : 'You have been logged out securely.');
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   const handleDemoClient = () => {
     setErrorMsg(null);
     const user = authStore.loginAsDemoClient();
-    setSuccessMsg(`Signed in as ${user.name} (${user.company})`);
+    setSuccessMsg(isAr ? `تم الدخول بحساب العميل: ${user.name} (${user.company})` : `Signed in as ${user.name} (${user.company})`);
   };
 
   return (
-    <div className="w-full bg-[#F8FAFC] min-h-screen py-10 sm:py-16" id="client-portal-container">
+    <div className="w-full bg-[#F8FAFC] min-h-screen py-10 sm:py-16" id="client-portal-container" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* SUCCESS / ERROR TOASTS */}
         {successMsg && (
@@ -156,7 +198,7 @@ export const ClientPortalPage: React.FC = () => {
             </div>
             <button
               onClick={() => setSuccessMsg(null)}
-              className="text-emerald-700 hover:text-emerald-900 font-bold ml-2 text-xs"
+              className="text-emerald-700 hover:text-emerald-900 font-bold mx-2 text-xs"
             >
               ✕
             </button>
@@ -171,7 +213,7 @@ export const ClientPortalPage: React.FC = () => {
             </div>
             <button
               onClick={() => setErrorMsg(null)}
-              className="text-red-700 hover:text-red-900 font-bold ml-2 text-xs"
+              className="text-red-700 hover:text-red-900 font-bold mx-2 text-xs"
             >
               ✕
             </button>
@@ -199,7 +241,9 @@ export const ClientPortalPage: React.FC = () => {
                           : 'bg-sky-50 text-sky-700 border-sky-200'
                       }`}
                     >
-                      {currentUser.role === 'admin' ? 'Operations Dispatch Officer' : 'Verified Client'}
+                      {currentUser.role === 'admin'
+                        ? (isAr ? 'ضابط عمليات وإرسال' : 'Operations Dispatch Officer')
+                        : (isAr ? 'عميل موثق' : 'Verified Client')}
                     </span>
                   </div>
                   <p className="text-slate-600 text-sm mt-0.5 flex items-center gap-2 flex-wrap">
@@ -207,7 +251,7 @@ export const ClientPortalPage: React.FC = () => {
                     <span>•</span>
                     <span className="text-slate-500">{currentUser.title}</span>
                     <span>•</span>
-                    <span className="text-slate-500">{currentUser.email}</span>
+                    <span className="text-slate-500" dir="ltr">{currentUser.email}</span>
                   </p>
                 </div>
               </div>
@@ -218,7 +262,7 @@ export const ClientPortalPage: React.FC = () => {
                   className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-[#C81D25] hover:bg-[#a8161d] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>New 60-Min Requisition</span>
+                  <span>{isAr ? 'طلب تسعير جديد (60 دقيقة)' : 'New 60-Min Requisition'}</span>
                 </Link>
 
                 {currentUser.role === 'admin' && (
@@ -227,7 +271,7 @@ export const ClientPortalPage: React.FC = () => {
                     className="inline-flex items-center gap-2 bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all"
                   >
                     <Shield className="w-4 h-4 text-amber-400" />
-                    <span>Admin Desk</span>
+                    <span>{isAr ? 'لوحة الإدارة' : 'Admin Desk'}</span>
                   </Link>
                 )}
 
@@ -236,7 +280,7 @@ export const ClientPortalPage: React.FC = () => {
                   className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{isAr ? 'تسجيل الخروج' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>
@@ -245,46 +289,58 @@ export const ClientPortalPage: React.FC = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                  <span>Active Requisitions</span>
+                  <span>{isAr ? 'الطلبات النشطة' : 'Active Requisitions'}</span>
                   <Clock className="w-4 h-4 text-amber-500" />
                 </div>
                 <div className="text-2xl font-bold text-[#0B2545] mt-2 font-cinzel">
-                  {clientQuotes.filter((q) => q.status === 'QUOTED' || q.status === 'RECEIVED').length}
+                  <span dir="ltr" className="unicode-isolate">
+                    {clientQuotes.filter((q) => q.status === 'QUOTED' || q.status === 'RECEIVED').length}
+                  </span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">Guaranteed 60-min SLA</div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  {isAr ? 'اتفاقية خدمة مضمونة 60 دقيقة' : 'Guaranteed 60-min SLA'}
+                </div>
               </div>
 
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                  <span>Approved & In Clearance</span>
+                  <span>{isAr ? 'معتمدة وقيد التخليص' : 'Approved & In Clearance'}</span>
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 </div>
                 <div className="text-2xl font-bold text-emerald-600 mt-2 font-cinzel">
-                  {clientQuotes.filter((q) => q.status === 'APPROVED' || q.status === 'IN_CLEARANCE').length || 1}
+                  <span dir="ltr" className="unicode-isolate">
+                    {clientQuotes.filter((q) => q.status === 'APPROVED' || q.status === 'IN_CLEARANCE').length || 1}
+                  </span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">Customs cleared in Port Tawfik</div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  {isAr ? 'تم التخليص الجمركي في بورتوفيق' : 'Customs cleared in Port Tawfik'}
+                </div>
               </div>
 
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                  <span>Assigned Launch Boats</span>
+                  <span>{isAr ? 'قوارب الإمداد المعينة' : 'Assigned Launch Boats'}</span>
                   <Ship className="w-4 h-4 text-sky-500" />
                 </div>
                 <div className="text-2xl font-bold text-[#0B2545] mt-2 font-cinzel">
-                  Mentors Star I & II
+                  {isAr ? 'مينتورز ستار 1 و 2' : 'Mentors Star I & II'}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">Suez Anchorage delivery</div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  {isAr ? 'تسليم بمنطقة انتظار السويس' : 'Suez Anchorage delivery'}
+                </div>
               </div>
 
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                  <span>24/7 Operations Desk</span>
+                  <span>{isAr ? 'مكتب العمليات 24/7' : '24/7 Operations Desk'}</span>
                   <Phone className="w-4 h-4 text-rose-500" />
                 </div>
                 <div className="text-base font-bold text-slate-900 mt-2 font-mono">
-                  +20 100 892 4477
+                  <span dir="ltr" className="unicode-isolate">+20 100 892 4477</span>
                 </div>
-                <div className="text-[11px] text-emerald-600 font-semibold mt-1">VHF Marine Ch 16/73 Live</div>
+                <div className="text-[11px] text-emerald-600 font-semibold mt-1">
+                  {isAr ? 'راديو بحري VHF قناة 16/73 مباشر' : 'VHF Marine Ch 16/73 Live'}
+                </div>
               </div>
             </div>
 
@@ -293,10 +349,12 @@ export const ClientPortalPage: React.FC = () => {
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-[#0B2545] font-cinzel">
-                    Your Vessel Requisitions & Quotations
+                    {isAr ? 'طلبات وعروض أسعار سفنكم' : 'Your Vessel Requisitions & Quotations'}
                   </h2>
                   <p className="text-slate-500 text-xs mt-0.5">
-                    Live updates direct from the Mentors Marine Suez Dispatch Room
+                    {isAr
+                      ? 'تحديثات حية ومباشرة من غرفة إرسال مينتورز مارين في السويس'
+                      : 'Live updates direct from the Mentors Marine Suez Dispatch Room'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -305,21 +363,21 @@ export const ClientPortalPage: React.FC = () => {
                     className="text-xs font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Upload Provision List</span>
+                    <span>{isAr ? 'رفع قائمة مؤن' : 'Upload Provision List'}</span>
                   </Link>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left rtl:text-right text-sm">
                   <thead className="bg-slate-50 text-slate-600 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="py-3.5 px-6">Quote Ref / Vessel</th>
-                      <th className="py-3.5 px-6">Port & ETA</th>
-                      <th className="py-3.5 px-6">Supply Scope</th>
-                      <th className="py-3.5 px-6">Status</th>
-                      <th className="py-3.5 px-6">Amount (USD)</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
+                      <th className="py-3.5 px-6">{isAr ? 'مرجع الطلب / السفينة' : 'Quote Ref / Vessel'}</th>
+                      <th className="py-3.5 px-6">{isAr ? 'الميناء وموعد الوصول' : 'Port & ETA'}</th>
+                      <th className="py-3.5 px-6">{isAr ? 'نطاق التوريد' : 'Supply Scope'}</th>
+                      <th className="py-3.5 px-6">{isAr ? 'الحالة' : 'Status'}</th>
+                      <th className="py-3.5 px-6">{isAr ? 'المبلغ (دولار أمريكي)' : 'Amount (USD)'}</th>
+                      <th className="py-3.5 px-6 text-right rtl:text-left">{isAr ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
@@ -331,15 +389,15 @@ export const ClientPortalPage: React.FC = () => {
                             <span>{q.vesselName}</span>
                           </div>
                           <div className="text-slate-500 font-mono text-[11px] mt-0.5">
-                            {q.id} • IMO {q.imoNumber}
+                            <span dir="ltr" className="unicode-isolate">{q.id} • IMO {q.imoNumber}</span>
                           </div>
                         </td>
 
                         <td className="py-4 px-6">
                           <div className="font-medium text-slate-800">{q.portOfCall}</div>
                           <div className="text-slate-500 text-[11px] flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>{q.etaDate} {q.etaTime}</span>
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span dir="ltr" className="unicode-isolate">{q.etaDate} {q.etaTime}</span>
                           </div>
                         </td>
 
@@ -350,7 +408,7 @@ export const ClientPortalPage: React.FC = () => {
                                 key={idx}
                                 className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium"
                               >
-                                {s}
+                                {translateService(s)}
                               </span>
                             ))}
                           </div>
@@ -359,32 +417,40 @@ export const ClientPortalPage: React.FC = () => {
                         <td className="py-4 px-6">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              q.status === 'QUOTED'
+                              q.status === 'QUOTED' || q.status === 'Quoted (60m)'
                                 ? 'bg-amber-100 text-amber-800'
-                                : q.status === 'APPROVED'
+                                : q.status === 'APPROVED' || q.status === 'Order Confirmed'
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : q.status === 'DELIVERED'
+                                : q.status === 'DELIVERED' || q.status === 'Delivered'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-slate-100 text-slate-800'
                             }`}
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                            {q.status}
+                            {translateStatus(q.status)}
                           </span>
                         </td>
 
                         <td className="py-4 px-6 font-mono font-bold text-slate-900 text-sm">
-                          {q.quotedAmount ? `$${q.quotedAmount.toLocaleString()}` : <span className="text-slate-400 font-normal italic">Calculating...</span>}
+                          {q.quotedAmount || q.quotedAmountUSD ? (
+                            <span dir="ltr" className="unicode-isolate">
+                              ${(q.quotedAmount || q.quotedAmountUSD || 0).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal italic">
+                              {isAr ? 'جارٍ الاحتساب...' : 'Calculating...'}
+                            </span>
+                          )}
                         </td>
 
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-4 px-6 text-right rtl:text-left">
                           <button
                             type="button"
                             onClick={() => setSelectedQuoteForModal(q)}
                             className="inline-flex items-center gap-1 bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-colors shadow-xs"
                           >
-                            <span>View Details</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
+                            <span>{isAr ? 'عرض التفاصيل' : 'View Details'}</span>
+                            <ChevronRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
                           </button>
                         </td>
                       </tr>
@@ -401,13 +467,15 @@ export const ClientPortalPage: React.FC = () => {
             <div className="text-center max-w-2xl mx-auto mb-10">
               <div className="inline-flex items-center gap-2 bg-sky-100 text-sky-900 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
                 <Lock className="w-3.5 h-3.5 text-[#0B2545]" />
-                <span>Client & Fleet Superintendent Portal</span>
+                <span>{isAr ? 'تسجيل الدخول' : 'Login'}</span>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] font-cinzel tracking-tight">
-                Welcome Back
+                {isAr ? 'مرحباً بعودتك' : 'Welcome Back'}
               </h1>
               <p className="text-slate-600 text-sm sm:text-base mt-2">
-                Access your requests, quotations and vessel orders
+                {isAr
+                  ? 'الوصول إلى طلباتك، عروض الأسعار، وأوامر تموين السفن'
+                  : 'Access your requests, quotations and vessel orders'}
               </p>
             </div>
 
@@ -426,7 +494,7 @@ export const ClientPortalPage: React.FC = () => {
                         : 'text-slate-400 hover:text-slate-700'
                     }`}
                   >
-                    Sign In to Portal
+                    {isAr ? 'تسجيل الدخول' : 'Sign In'}
                     {authMode === 'login' && (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0B2545]"></span>
                     )}
@@ -441,7 +509,7 @@ export const ClientPortalPage: React.FC = () => {
                         : 'text-slate-400 hover:text-slate-700'
                     }`}
                   >
-                    Register New Account
+                    {isAr ? 'تسجيل حساب جديد' : 'Register New Account'}
                     {authMode === 'signup' && (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0B2545]"></span>
                     )}
@@ -453,39 +521,41 @@ export const ClientPortalPage: React.FC = () => {
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Email Address <span className="text-red-500">*</span>
+                        {isAr ? 'البريد الإلكتروني' : 'Email'} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <Mail className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                         <input
                           type="email"
                           required
+                          dir="ltr"
                           value={loginEmail}
                           onChange={(e) => setLoginEmail(e.target.value)}
-                          placeholder="e.g. superintendent@shipping.com"
-                          className="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545] text-slate-900"
+                          placeholder="superintendent@shipping.com"
+                          className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545] text-slate-900`}
                         />
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Password <span className="text-red-500">*</span>
+                        {isAr ? 'كلمة المرور' : 'Password'} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <Lock className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
+                          dir="ltr"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
-                          placeholder="Enter your password"
-                          className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545] text-slate-900"
+                          placeholder={isAr ? 'أدخل كلمة المرور' : 'Enter your password'}
+                          className={`w-full ${isAr ? 'pr-10 pl-10 text-right' : 'pl-10 pr-10'} py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545] text-slate-900`}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                          className={`absolute ${isAr ? 'left-3' : 'right-3'} top-3 text-slate-400 hover:text-slate-600`}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -501,17 +571,21 @@ export const ClientPortalPage: React.FC = () => {
                           onChange={(e) => setRememberMe(e.target.checked)}
                           className="rounded text-[#0B2545] focus:ring-0"
                         />
-                        <span>Remember me</span>
+                        <span>{isAr ? 'تذكرني' : 'Remember me'}</span>
                       </label>
 
                       <button
                         type="button"
                         onClick={() =>
-                          alert('Password reset link sent to registered vessel superintendent email address.')
+                          alert(
+                            isAr
+                              ? 'تم إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني المسجل.'
+                              : 'Password reset link sent to registered vessel superintendent email address.'
+                          )
                         }
                         className="text-sky-700 hover:text-sky-900 font-semibold"
                       >
-                        Forgot password?
+                        {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
                       </button>
                     </div>
 
@@ -522,20 +596,26 @@ export const ClientPortalPage: React.FC = () => {
                       className="w-full bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-sm py-3 rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
                     >
                       <KeyRound className="w-4 h-4" />
-                      <span>{isSubmitting ? 'Verifying Credentials...' : 'Login'}</span>
+                      <span>
+                        {isSubmitting
+                          ? (isAr ? 'جارٍ التحقق من البيانات...' : 'Verifying Credentials...')
+                          : (isAr ? 'تسجيل الدخول' : 'Login')}
+                      </span>
                     </button>
 
                     {/* Quick Demo Client Credentials */}
                     <div className="pt-4 border-t border-slate-100">
                       <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-2 text-center">
-                        Need quick preview access?
+                        {isAr ? 'هل تحتاج إلى معاينة تجريبية فورية؟' : 'Need quick preview access?'}
                       </p>
                       <button
                         type="button"
                         onClick={handleDemoClient}
                         className="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold py-2 rounded-lg transition-colors text-center border border-sky-100"
                       >
-                        Sample Client Account: Capt. Rossi (MSC Geneva)
+                        {isAr
+                          ? 'حساب عميل تجريبي: القبطان ماركو روسي (MSC Geneva)'
+                          : 'Sample Client Account: Capt. Rossi (MSC Geneva)'}
                       </button>
                     </div>
                   </form>
@@ -545,34 +625,34 @@ export const ClientPortalPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Full Name <span className="text-red-500">*</span>
+                          {isAr ? 'الاسم بالكامل' : 'Full Name'} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                          <User className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                           <input
                             type="text"
                             required
                             value={signupName}
                             onChange={(e) => setSignupName(e.target.value)}
-                            placeholder="e.g. Capt. Marco Rossi"
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]"
+                            placeholder={isAr ? 'مثال: القبطان ماركو روسي' : 'e.g. Capt. Marco Rossi'}
+                            className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]`}
                           />
                         </div>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Company / Shipowner <span className="text-red-500">*</span>
+                          {isAr ? 'الشركة الملاحية' : 'Shipping Company'} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                          <Building2 className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                           <input
                             type="text"
                             required
                             value={signupCompany}
                             onChange={(e) => setSignupCompany(e.target.value)}
-                            placeholder="e.g. Mediterranean Shipping Co."
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]"
+                            placeholder={isAr ? 'مثال: شركة البحر الأبيض المتوسط للملاحة (MSC)' : 'e.g. Mediterranean Shipping Co. (MSC)'}
+                            className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]`}
                           />
                         </div>
                       </div>
@@ -581,33 +661,35 @@ export const ClientPortalPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Corporate / Vessel Email <span className="text-red-500">*</span>
+                          {isAr ? 'البريد الإلكتروني' : 'Email'} <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                          <Mail className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                           <input
                             type="email"
                             required
+                            dir="ltr"
                             value={signupEmail}
                             onChange={(e) => setSignupEmail(e.target.value)}
                             placeholder="superintendent@company.com"
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]"
+                            className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]`}
                           />
                         </div>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Phone / WhatsApp
+                          {isAr ? 'رقم الهاتف' : 'Phone Number'}
                         </label>
                         <div className="relative">
-                          <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                          <Phone className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                           <input
                             type="text"
+                            dir="ltr"
                             value={signupPhone}
                             onChange={(e) => setSignupPhone(e.target.value)}
                             placeholder="+39 340 551 2894"
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]"
+                            className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]`}
                           />
                         </div>
                       </div>
@@ -615,22 +697,23 @@ export const ClientPortalPage: React.FC = () => {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Select Password <span className="text-red-500">*</span>
+                        {isAr ? 'كلمة المرور' : 'Password'} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <Lock className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
+                          dir="ltr"
                           value={signupPassword}
                           onChange={(e) => setSignupPassword(e.target.value)}
-                          placeholder="At least 6 characters"
-                          className="w-full pl-10 pr-10 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]"
+                          placeholder={isAr ? 'أدخل كلمة المرور' : 'Enter your password'}
+                          className={`w-full ${isAr ? 'pr-10 pl-10 text-right' : 'pl-10 pr-10'} py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545]`}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                          className={`absolute ${isAr ? 'left-3' : 'right-3'} top-2.5 text-slate-400 hover:text-slate-600`}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -642,7 +725,7 @@ export const ClientPortalPage: React.FC = () => {
                       className="w-full bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-sm py-3 rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2"
                     >
                       <Check className="w-4 h-4" />
-                      <span>Create Free Client Account</span>
+                      <span>{isAr ? 'إنشاء حساب جديد' : 'Create Account'}</span>
                     </button>
                   </form>
                 )}
@@ -652,10 +735,12 @@ export const ClientPortalPage: React.FC = () => {
               <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-8 space-y-6">
                 <div className="border-b border-slate-100 pb-4">
                   <h3 className="text-xl font-bold text-[#0B2545] font-cinzel">
-                    Client Portal Advantages
+                    {isAr ? 'مزايا الحساب' : 'Account Advantages'}
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Integrated directly with the Suez Canal vessel supply network
+                    {isAr
+                      ? 'متصلة مباشرة بشبكة تزويد السفن في قناة السويس'
+                      : 'Integrated directly with the Suez Canal vessel supply network'}
                   </p>
                 </div>
 
@@ -666,9 +751,13 @@ export const ClientPortalPage: React.FC = () => {
                       <FileCheck className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">Track your quotations</h4>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isAr ? 'متابعة عروض الأسعار' : 'Track your quotations'}
+                      </h4>
                       <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Real-time SLA clock tracking for your 60-minute itemized proforma quotes.
+                        {isAr
+                          ? 'متابعة دقيقة لاتفاقية مستوى الخدمة لعروض الأسعار التفصيلية خلال 60 دقيقة.'
+                          : 'Real-time SLA clock tracking for your 60-minute itemized proforma quotes.'}
                       </p>
                     </div>
                   </div>
@@ -679,9 +768,13 @@ export const ClientPortalPage: React.FC = () => {
                       <History className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">View order history</h4>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isAr ? 'عرض سجل الطلبات' : 'View order history'}
+                      </h4>
                       <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Instant access to all historical invoices, customs receipts, and deck delivery notes.
+                        {isAr
+                          ? 'وصول فوري لجميع الفواتير السابقة وإيصالات الجمارك ومذكرات التسليم على ظهر السفينة.'
+                          : 'Instant access to all historical invoices, customs receipts, and deck delivery notes.'}
                       </p>
                     </div>
                   </div>
@@ -692,9 +785,13 @@ export const ClientPortalPage: React.FC = () => {
                       <RotateCcw className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">Reorder easily</h4>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isAr ? 'إعادة الطلب بسهولة' : 'Reorder easily'}
+                      </h4>
                       <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Clone previous provision lists for recurring Suez transit calls with 1-click.
+                        {isAr
+                          ? 'نسخ قوائم المؤن السابقة لرحلات عبور السويس المتكررة بنقرة واحدة.'
+                          : 'Clone previous provision lists for recurring Suez transit calls with 1-click.'}
                       </p>
                     </div>
                   </div>
@@ -705,9 +802,13 @@ export const ClientPortalPage: React.FC = () => {
                       <Ship className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">Manage your vessels</h4>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isAr ? 'إدارة أسطول سفنك' : 'Manage your vessels'}
+                      </h4>
                       <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Save fleet IMO numbers, crew complements, and dietary specs for rapid ordering.
+                        {isAr
+                          ? 'حفظ أرقام IMO للأسطول وبيانات الطاقم والمواصفات الغذائية للطلب السريع.'
+                          : 'Save fleet IMO numbers, crew complements, and dietary specs for rapid ordering.'}
                       </p>
                     </div>
                   </div>
@@ -718,9 +819,13 @@ export const ClientPortalPage: React.FC = () => {
                       <Headphones className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">Dedicated support</h4>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isAr ? 'دعم بحري مخصص' : 'Dedicated support'}
+                      </h4>
                       <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Direct access to your designated Suez port superintendent on VHF Ch 16 and phone.
+                        {isAr
+                          ? 'تواصل مباشر مع مشرف ميناء السويس المخصص عبر لاسلكي القناة 16 والهاتف.'
+                          : 'Direct access to your designated Suez port superintendent on VHF Ch 16 and phone.'}
                       </p>
                     </div>
                   </div>
@@ -729,7 +834,9 @@ export const ClientPortalPage: React.FC = () => {
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 flex items-center gap-3">
                   <Shield className="w-5 h-5 text-sky-700 shrink-0" />
                   <span>
-                    Enterprise maritime-grade data security with encrypted communications and verified delivery logs.
+                    {isAr
+                      ? 'أمان بيانات بحري بمستوى المؤسسات مع اتصالات مشفرة وسجلات تسليم موثقة.'
+                      : 'Enterprise maritime-grade data security with encrypted communications and verified delivery logs.'}
                   </span>
                 </div>
               </div>
@@ -739,13 +846,13 @@ export const ClientPortalPage: React.FC = () => {
 
         {/* MODAL: VIEW QUOTE DETAIL */}
         {selectedQuoteForModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" dir={isAr ? 'rtl' : 'ltr'}>
             <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <Ship className="w-5 h-5 text-[#0B2545]" />
                   <h3 className="text-lg font-bold text-[#0B2545] font-cinzel">
-                    {selectedQuoteForModal.vesselName} (IMO {selectedQuoteForModal.imoNumber})
+                    {selectedQuoteForModal.vesselName} (IMO <span dir="ltr" className="font-mono unicode-isolate">{selectedQuoteForModal.imoNumber}</span>)
                   </h3>
                 </div>
                 <button
@@ -758,34 +865,38 @@ export const ClientPortalPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl">
-                  <span className="text-slate-400 block font-medium">Reference Code</span>
-                  <strong className="text-slate-800 font-mono">{selectedQuoteForModal.id}</strong>
+                  <span className="text-slate-400 block font-medium">{isAr ? 'كود المرجع' : 'Reference Code'}</span>
+                  <strong className="text-slate-800 font-mono" dir="ltr">{selectedQuoteForModal.id}</strong>
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl">
-                  <span className="text-slate-400 block font-medium">Port of Delivery</span>
+                  <span className="text-slate-400 block font-medium">{isAr ? 'ميناء التسليم' : 'Port of Delivery'}</span>
                   <strong className="text-slate-800">{selectedQuoteForModal.portOfCall}</strong>
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl">
-                  <span className="text-slate-400 block font-medium">Vessel ETA</span>
-                  <strong className="text-slate-800">{selectedQuoteForModal.etaDate} {selectedQuoteForModal.etaTime}</strong>
+                  <span className="text-slate-400 block font-medium">{isAr ? 'موعد وصول السفينة' : 'Vessel ETA'}</span>
+                  <strong className="text-slate-800" dir="ltr">{selectedQuoteForModal.etaDate} {selectedQuoteForModal.etaTime}</strong>
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl">
-                  <span className="text-slate-400 block font-medium">Official Quoted Value</span>
+                  <span className="text-slate-400 block font-medium">{isAr ? 'قيمة العرض الرسمية' : 'Official Quoted Value'}</span>
                   <strong className="text-emerald-700 font-bold font-mono">
-                    {selectedQuoteForModal.quotedAmountUSD ? `$${selectedQuoteForModal.quotedAmountUSD.toLocaleString()} USD` : 'In Review'}
+                    {selectedQuoteForModal.quotedAmountUSD ? (
+                      <span dir="ltr" className="unicode-isolate">${selectedQuoteForModal.quotedAmountUSD.toLocaleString()} USD</span>
+                    ) : (
+                      isAr ? 'قيد المراجعة' : 'In Review'
+                    )}
                   </strong>
                 </div>
               </div>
 
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-1.5">Requisition Scope</span>
+                <span className="text-xs font-bold text-slate-700 block mb-1.5">{isAr ? 'نطاق الطلب' : 'Requisition Scope'}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedQuoteForModal.services.map((s, idx) => (
                     <span key={idx} className="bg-sky-50 text-sky-800 px-2.5 py-1 rounded-md text-xs font-semibold">
-                      {s}
+                      {translateService(s)}
                     </span>
                   ))}
                 </div>
@@ -793,7 +904,7 @@ export const ClientPortalPage: React.FC = () => {
 
               {selectedQuoteForModal.selectedItems && selectedQuoteForModal.selectedItems.length > 0 && (
                 <div>
-                  <span className="text-xs font-bold text-slate-700 block mb-1">Requested Key Items</span>
+                  <span className="text-xs font-bold text-slate-700 block mb-1">{isAr ? 'البنود الرئيسية المطلوبة' : 'Requested Key Items'}</span>
                   <ul className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl list-disc list-inside space-y-1">
                     {selectedQuoteForModal.selectedItems.map((item, i) => (
                       <li key={i}>{item}</li>
@@ -808,13 +919,13 @@ export const ClientPortalPage: React.FC = () => {
                   onClick={() => setSelectedQuoteForModal(null)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900"
                 >
-                  Close
+                  {isAr ? 'إغلاق' : 'Close'}
                 </button>
                 <Link
                   to={`/get-a-quote?vessel=${encodeURIComponent(selectedQuoteForModal.vesselName)}&imo=${selectedQuoteForModal.imoNumber}`}
                   className="px-4 py-2 bg-[#0B2545] text-white text-xs font-bold rounded-xl hover:bg-[#13315C] transition-colors"
                 >
-                  Reorder Requisition
+                  {isAr ? 'إعادة تكرار الطلب' : 'Reorder Requisition'}
                 </Link>
               </div>
             </div>
@@ -824,3 +935,4 @@ export const ClientPortalPage: React.FC = () => {
     </div>
   );
 };
+

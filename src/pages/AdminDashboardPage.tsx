@@ -44,6 +44,7 @@ import {
 import { requestStore } from '../services/requestStore';
 import { authStore } from '../services/authStore';
 import { languageStore, Language } from '../services/languageStore';
+import { getSupabaseClient } from '../services/supabaseClient';
 import { AdminQuoteRequest, AdminContactInquiry, RFQStatus, ContactStatus, AppUser } from '../types';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -111,9 +112,26 @@ export const AdminDashboardPage: React.FC = () => {
           message: data.database === 'supabase_connected_healthy' ? 'Supabase Cloud Live' : data.database,
           count: (data.stats?.quoteRequests || 0) + (data.stats?.contactInquiries || 0)
         });
+        return;
       }
     } catch {
-      setDbStatus({ configured: false, message: 'Local Mode', count: 0 });
+      // Fallback for static hosting / GitHub Pages
+    }
+
+    const client = getSupabaseClient();
+    const totalRecords = requestStore.getQuoteRequests().length + requestStore.getContactInquiries().length;
+    if (client) {
+      setDbStatus({
+        configured: true,
+        message: 'Supabase Direct Client',
+        count: totalRecords
+      });
+    } else {
+      setDbStatus({
+        configured: false,
+        message: 'Local Cache Active',
+        count: totalRecords
+      });
     }
   };
 
@@ -236,6 +254,30 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   const isStaffAuthenticated = currentUser !== null && currentUser.role === 'admin';
+  const isAr = currentLang === 'ar';
+
+  const translateStatus = (status: string) => {
+    if (!isAr) return status;
+    const map: Record<string, string> = {
+      'New': 'جديد',
+      'In Review': 'قيد المراجعة',
+      'Quoted (60m)': 'تم التسعير (60 دقيقة)',
+      'Order Confirmed': 'تم تأكيد الطلب',
+      'Dispatched': 'تم الإرسال',
+      'Delivered': 'تم التسليم'
+    };
+    return map[status] || status;
+  };
+
+  const translateRating = (rating: string) => {
+    if (!isAr) return rating;
+    const map: Record<string, string> = {
+      'VIP': 'عميل متميز (VIP)',
+      'Frequent': 'عميل دائم',
+      'Standard': 'عميل معتمد'
+    };
+    return map[rating] || rating;
+  };
 
   // Calculations for KPI Panel 8:
   // Today's Overview from blueprint:
@@ -270,7 +312,7 @@ export const AdminDashboardPage: React.FC = () => {
   // 1. IF NOT AUTHENTICATED AS ADMIN: SHOW CLEARANCE CHALLENGE
   if (!isStaffAuthenticated) {
     return (
-      <div className="w-full min-h-[85vh] bg-[#07172C] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full min-h-[85vh] bg-[#07172C] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" dir={isAr ? 'rtl' : 'ltr'}>
         <div className="max-w-md w-full space-y-8 bg-[#0B2545] p-8 rounded-2xl border border-white/15 shadow-2xl relative overflow-hidden">
           {/* Subtle radar accent */}
           <div className="absolute -top-16 -right-16 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -280,13 +322,15 @@ export const AdminDashboardPage: React.FC = () => {
               <Shield className="w-8 h-8" />
             </div>
             <span className="text-xs font-mono font-bold tracking-widest uppercase text-sky-300 block">
-              Suez Canal Authority Free Zone
+              {isAr ? 'المنطقة الحرة لهيئة قناة السويس' : 'Suez Canal Authority Free Zone'}
             </span>
             <h2 className="text-2xl font-extrabold text-white font-cinzel mt-1 tracking-wide">
-              Operations Clearance Desk
+              {isAr ? 'مكتب تصريح العمليات الملاحية' : 'Operations Clearance Desk'}
             </h2>
             <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-              Restricted to authorized Mentors Marine Operations Superintendents, Dispatch Officers & Customs Logistics.
+              {isAr
+                ? 'مخصص لضباط ومشرفي عمليات مينتورز مارين وخدمات التخليص الجمركي واللوجستي المعتمدة.'
+                : 'Restricted to authorized Mentors Marine Operations Superintendents, Dispatch Officers & Customs Logistics.'}
             </p>
           </div>
 
@@ -300,39 +344,41 @@ export const AdminDashboardPage: React.FC = () => {
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Staff Officer Email
+                {isAr ? 'البريد الإلكتروني للضابط المسئول' : 'Staff Officer Email'}
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Mail className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                 <input
                   type="email"
                   required
+                  dir="ltr"
                   value={staffEmail}
                   onChange={(e) => setStaffEmail(e.target.value)}
                   placeholder="admin@mentors.com"
-                  className="w-full pl-10 pr-3 py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500"
+                  className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500`}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Password / Clearance Key
+                {isAr ? 'كلمة المرور / مفتاح التصريح' : 'Password / Clearance Key'}
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Lock className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  dir="ltr"
                   value={staffPassword}
                   onChange={(e) => setStaffPassword(e.target.value)}
-                  placeholder="Enter administrator password"
-                  className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500"
+                  placeholder={isAr ? 'أدخل كلمة مرور المسؤول' : 'Enter administrator password'}
+                  className={`w-full ${isAr ? 'pr-10 pl-10 text-right' : 'pl-10 pr-10'} py-2.5 bg-white/5 border border-white/15 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-slate-500`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+                  className={`absolute ${isAr ? 'left-3' : 'right-3'} top-2.5 text-slate-400 hover:text-white`}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -345,7 +391,11 @@ export const AdminDashboardPage: React.FC = () => {
               className="w-full bg-[#C81D25] hover:bg-[#a8161d] text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 mt-4 disabled:opacity-60"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>{isAuthorizing ? 'Authorizing Dispatch...' : 'Authorize Operations Access'}</span>
+              <span>
+                {isAuthorizing
+                  ? (isAr ? 'جارٍ التحقق من التصريح...' : 'Authorizing Dispatch...')
+                  : (isAr ? 'تصريح الدخول لغرفة العمليات' : 'Authorize Operations Access')}
+              </span>
             </button>
           </form>
         </div>
@@ -355,10 +405,10 @@ export const AdminDashboardPage: React.FC = () => {
 
   // 2. AUTHENTICATED OPERATIONS COMMAND CENTER (EXACT BLUEPRINT PANEL 8)
   return (
-    <div className="w-full bg-[#0B2545] text-slate-100 min-h-screen pb-16 font-sans select-none" id="admin-analytics-desk">
+    <div className="w-full bg-[#0B2545] text-slate-100 min-h-screen pb-16 font-sans select-none" id="admin-analytics-desk" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 bg-emerald-900 border border-emerald-400 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top text-xs">
+        <div className="fixed top-20 right-6 rtl:right-auto rtl:left-6 z-50 bg-emerald-900 border border-emerald-400 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top text-xs">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-semibold">{toastMessage}</span>
         </div>
@@ -377,7 +427,7 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <BarChart2 className="w-4 h-4 text-sky-400" />
-              <span>Analytics Overview</span>
+              <span>{isAr ? 'نظرة عامة على التحليلات' : 'Analytics Overview'}</span>
             </button>
 
             <button
@@ -389,10 +439,10 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <Ship className="w-4 h-4 text-emerald-400" />
-              <span>Live RFQs</span>
+              <span>{isAr ? 'طلبات التسعير الحية' : 'Live RFQs'}</span>
               {quotes.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px]">
-                  {quotes.length}
+                <span className="mx-1 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px]">
+                  <span dir="ltr" className="unicode-isolate">{quotes.length}</span>
                 </span>
               )}
             </button>
@@ -406,7 +456,7 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <DollarSign className="w-4 h-4 text-amber-400" />
-              <span>Pricing & Quotations</span>
+              <span>{isAr ? 'التسعير وعروض الأسعار' : 'Pricing & Quotations'}</span>
             </button>
 
             <button
@@ -418,7 +468,9 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <Briefcase className="w-4 h-4 text-purple-400" />
-              <span>Active Orders ({activeOrdersCount})</span>
+              <span>
+                {isAr ? 'الأوامر النشطة' : 'Active Orders'} (<span dir="ltr" className="unicode-isolate">{activeOrdersCount}</span>)
+              </span>
             </button>
 
             <button
@@ -430,7 +482,7 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <Users className="w-4 h-4 text-teal-400" />
-              <span>Top Customers</span>
+              <span>{isAr ? 'أهم العملاء' : 'Top Customers'}</span>
             </button>
 
             <button
@@ -442,7 +494,9 @@ export const AdminDashboardPage: React.FC = () => {
               }`}
             >
               <Mail className="w-4 h-4 text-sky-400" />
-              <span>Contact Messages ({inquiries.length})</span>
+              <span>
+                {isAr ? 'رسائل التواصل' : 'Contact Messages'} (<span dir="ltr" className="unicode-isolate">{inquiries.length}</span>)
+              </span>
             </button>
           </div>
 
@@ -452,19 +506,19 @@ export const AdminDashboardPage: React.FC = () => {
               onClick={handleManualSync}
               disabled={isSyncing}
               className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-2 rounded-lg border border-white/15 transition-colors font-semibold"
-              title="Sync with Database"
+              title={isAr ? 'مزامنة مع قاعدة البيانات' : 'Sync with Database'}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>Sync</span>
+              <span>{isAr ? 'مزامنة' : 'Sync'}</span>
             </button>
 
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-300 hover:text-white text-xs px-3 py-2 rounded-lg border border-red-500/30 transition-colors font-semibold"
-              title="Logout from Operations Desk"
+              title={isAr ? 'تسجيل الخروج من مكتب العمليات' : 'Logout from Operations Desk'}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
+              <span>{isAr ? 'خروج' : 'Logout'}</span>
             </button>
           </div>
         </div>
@@ -476,66 +530,90 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <TrendingUp className="w-3.5 h-3.5 text-sky-400" />
-              <span>Today's Overview (Live Port Activity)</span>
+              <span>{isAr ? 'ملخص اليوم (حركة الموانئ الحية)' : "Today's Overview (Live Port Activity)"}</span>
             </h2>
             <span className="text-[11px] text-emerald-400 font-mono">
-              Live AIS & Radar Sweep Active
+              {isAr ? 'مسح الرادار ونظام AIS نشط' : 'Live AIS & Radar Sweep Active'}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {/* 1. Vessels Detected */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">Vessels Detected</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-white font-cinzel block mt-1">
-                {vesselsDetectedCount}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'السفن المرصودة' : 'Vessels Detected'}
               </span>
-              <span className="text-[10px] text-sky-400 mt-1 block">Suez & Waiting Area</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-white font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">{vesselsDetectedCount}</span>
+              </span>
+              <span className="text-[10px] text-sky-400 mt-1 block">
+                {isAr ? 'السويس ومنطقة الانتظار' : 'Suez & Waiting Area'}
+              </span>
             </div>
 
             {/* 2. Leads Contacted */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">Leads Contacted</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-sky-300 font-cinzel block mt-1">
-                {leadsContactedCount}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'السفن المتواصل معها' : 'Leads Contacted'}
               </span>
-              <span className="text-[10px] text-slate-400 mt-1 block">Via AIS & Email</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-sky-300 font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">{leadsContactedCount}</span>
+              </span>
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                {isAr ? 'عبر AIS والبريد' : 'Via AIS & Email'}
+              </span>
             </div>
 
             {/* 3. Replies */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">Replies</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-cinzel block mt-1">
-                {repliesCount}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'الردود المستلمة' : 'Replies'}
               </span>
-              <span className="text-[10px] text-emerald-400/80 mt-1 block">38% Response Rate</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">{repliesCount}</span>
+              </span>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">
+                {isAr ? 'معدل استجابة 38%' : '38% Response Rate'}
+              </span>
             </div>
 
             {/* 4. RFQs */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">RFQs</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-cinzel block mt-1">
-                {rfqsCount}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'طلبات التسعير (RFQs)' : 'RFQs'}
               </span>
-              <span className="text-[10px] text-amber-300/80 mt-1 block">Under 60-Min SLA</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">{rfqsCount}</span>
+              </span>
+              <span className="text-[10px] text-amber-300/80 mt-1 block">
+                {isAr ? 'ضمن مهلة 60 دقيقة' : 'Under 60-Min SLA'}
+              </span>
             </div>
 
             {/* 5. Orders */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">Orders</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-purple-400 font-cinzel block mt-1">
-                {activeOrdersCount}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'الأوامر الجارية' : 'Orders'}
               </span>
-              <span className="text-[10px] text-purple-300/80 mt-1 block">In Port Clearance</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-purple-400 font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">{activeOrdersCount}</span>
+              </span>
+              <span className="text-[10px] text-purple-300/80 mt-1 block">
+                {isAr ? 'قيد التخليص الجمركي' : 'In Port Clearance'}
+              </span>
             </div>
 
             {/* 6. Est. Revenue */}
             <div className="bg-[#102C4E] border border-white/10 rounded-xl p-4 shadow-sm hover:border-white/20 transition-all">
-              <span className="text-[11px] font-semibold text-slate-400 block">Est. Revenue</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-cinzel block mt-1">
-                ${estRevenueSum.toLocaleString()}
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {isAr ? 'الإيراد التقديري' : 'Est. Revenue'}
               </span>
-              <span className="text-[10px] text-emerald-400/80 mt-1 block">USD Billed Today</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-cinzel block mt-1">
+                <span dir="ltr" className="unicode-isolate">${estRevenueSum.toLocaleString()}</span>
+              </span>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">
+                {isAr ? 'فواتير اليوم بالدولار' : 'USD Billed Today'}
+              </span>
             </div>
           </div>
         </div>
@@ -547,9 +625,13 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <PieChart className="w-4 h-4 text-sky-400" />
-                <h3 className="text-sm font-bold text-white font-cinzel">Vessels by Type</h3>
+                <h3 className="text-sm font-bold text-white font-cinzel">
+                  {isAr ? 'تصنيف السفن حسب النوع' : 'Vessels by Type'}
+                </h3>
               </div>
-              <span className="text-xs text-slate-400">Canal Convoy Distribution</span>
+              <span className="text-xs text-slate-400">
+                {isAr ? 'توزيع قوافل القناة' : 'Canal Convoy Distribution'}
+              </span>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-around gap-6 pt-2">
@@ -615,8 +697,12 @@ export const AdminDashboardPage: React.FC = () => {
 
                 {/* Inner center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="text-xl font-extrabold text-white font-cinzel">47</span>
-                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Vessels</span>
+                  <span className="text-xl font-extrabold text-white font-cinzel">
+                    <span dir="ltr" className="unicode-isolate">47</span>
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">
+                    {isAr ? 'سفينة' : 'Vessels'}
+                  </span>
                 </div>
               </div>
 
@@ -625,41 +711,51 @@ export const AdminDashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
-                    <span className="text-slate-300">Container Ship</span>
+                    <span className="text-slate-300">{isAr ? 'سفن حاويات' : 'Container Ship'}</span>
                   </div>
-                  <strong className="text-white font-mono font-bold">40%</strong>
+                  <strong className="text-white font-mono font-bold">
+                    <span dir="ltr" className="unicode-isolate">40%</span>
+                  </strong>
                 </div>
 
                 <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
-                    <span className="text-slate-300">Bulk Carrier</span>
+                    <span className="text-slate-300">{isAr ? 'سفن صب جاف (بلك)' : 'Bulk Carrier'}</span>
                   </div>
-                  <strong className="text-white font-mono font-bold">25%</strong>
+                  <strong className="text-white font-mono font-bold">
+                    <span dir="ltr" className="unicode-isolate">25%</span>
+                  </strong>
                 </div>
 
                 <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span>
-                    <span className="text-slate-300">Crude/Product Tanker</span>
+                    <span className="text-slate-300">{isAr ? 'ناقلات نفط / مشتقات' : 'Crude/Product Tanker'}</span>
                   </div>
-                  <strong className="text-white font-mono font-bold">15%</strong>
+                  <strong className="text-white font-mono font-bold">
+                    <span dir="ltr" className="unicode-isolate">15%</span>
+                  </strong>
                 </div>
 
                 <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
-                    <span className="text-slate-300">General Cargo</span>
+                    <span className="text-slate-300">{isAr ? 'بضائع عامة' : 'General Cargo'}</span>
                   </div>
-                  <strong className="text-white font-mono font-bold">12%</strong>
+                  <strong className="text-white font-mono font-bold">
+                    <span dir="ltr" className="unicode-isolate">12%</span>
+                  </strong>
                 </div>
 
                 <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/5">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></span>
-                    <span className="text-slate-300">Other (Tugs, LNG)</span>
+                    <span className="text-slate-300">{isAr ? 'أخرى (قاطرات، غاز)' : 'Other (Tugs, LNG)'}</span>
                   </div>
-                  <strong className="text-white font-mono font-bold">8%</strong>
+                  <strong className="text-white font-mono font-bold">
+                    <span dir="ltr" className="unicode-isolate">8%</span>
+                  </strong>
                 </div>
               </div>
             </div>
@@ -670,9 +766,13 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-bold text-white font-cinzel">Monthly Orders</h3>
+                <h3 className="text-sm font-bold text-white font-cinzel">
+                  {isAr ? 'الطلبات الشهرية' : 'Monthly Orders'}
+                </h3>
               </div>
-              <span className="text-xs text-emerald-400 font-mono font-semibold">+34% YOY Growth</span>
+              <span className="text-xs text-emerald-400 font-mono font-semibold">
+                <span dir="ltr" className="unicode-isolate">+34% YOY Growth</span>
+              </span>
             </div>
 
             {/* Custom SVG/HTML Bar chart for Jan - Jun */}
@@ -680,50 +780,65 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="h-44 flex items-end justify-between gap-3 sm:gap-6 px-2 border-b border-white/15 pb-2">
                 {/* Jan */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">18</span>
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">18</span>
+                  </span>
                   <div className="w-full bg-sky-500/40 group-hover:bg-sky-400 transition-all rounded-t-md h-[40%]"></div>
-                  <span className="text-[11px] text-slate-400 font-bold">Jan</span>
+                  <span className="text-[11px] text-slate-400 font-bold">{isAr ? 'يناير' : 'Jan'}</span>
                 </div>
 
                 {/* Feb */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">24</span>
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">24</span>
+                  </span>
                   <div className="w-full bg-sky-500/50 group-hover:bg-sky-400 transition-all rounded-t-md h-[52%]"></div>
-                  <span className="text-[11px] text-slate-400 font-bold">Feb</span>
+                  <span className="text-[11px] text-slate-400 font-bold">{isAr ? 'فبراير' : 'Feb'}</span>
                 </div>
 
                 {/* Mar */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">32</span>
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">32</span>
+                  </span>
                   <div className="w-full bg-sky-500/60 group-hover:bg-sky-400 transition-all rounded-t-md h-[68%]"></div>
-                  <span className="text-[11px] text-slate-400 font-bold">Mar</span>
+                  <span className="text-[11px] text-slate-400 font-bold">{isAr ? 'مارس' : 'Mar'}</span>
                 </div>
 
                 {/* Apr */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">28</span>
+                  <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">28</span>
+                  </span>
                   <div className="w-full bg-sky-500/60 group-hover:bg-sky-400 transition-all rounded-t-md h-[60%]"></div>
-                  <span className="text-[11px] text-slate-400 font-bold">Apr</span>
+                  <span className="text-[11px] text-slate-400 font-bold">{isAr ? 'أبريل' : 'Apr'}</span>
                 </div>
 
                 {/* May */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-amber-300 opacity-0 group-hover:opacity-100 transition-opacity">41</span>
+                  <span className="text-[10px] font-mono text-amber-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">41</span>
+                  </span>
                   <div className="w-full bg-amber-400 group-hover:bg-amber-300 transition-all rounded-t-md h-[86%] shadow-xs"></div>
-                  <span className="text-[11px] text-amber-300 font-bold">May</span>
+                  <span className="text-[11px] text-amber-300 font-bold">{isAr ? 'مايو' : 'May'}</span>
                 </div>
 
                 {/* Jun */}
                 <div className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] font-mono text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity">47</span>
+                  <span className="text-[10px] font-mono text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span dir="ltr" className="unicode-isolate">47</span>
+                  </span>
                   <div className="w-full bg-emerald-400 group-hover:bg-emerald-300 transition-all rounded-t-md h-[98%] shadow-xs"></div>
-                  <span className="text-[11px] text-emerald-300 font-bold">Jun</span>
+                  <span className="text-[11px] text-emerald-300 font-bold">{isAr ? 'يونيو' : 'Jun'}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 px-2">
-                <span>Peak Convoy Season</span>
-                <span>Average Value: <strong>$14,200 / Vessel</strong></span>
+                <span>{isAr ? 'موسم ذروة قوافل العبور' : 'Peak Convoy Season'}</span>
+                <span>
+                  {isAr ? 'متوسط القيمة:' : 'Average Value:'}{' '}
+                  <strong className="text-white" dir="ltr"><span className="unicode-isolate">$14,200</span> / {isAr ? 'سفينة' : 'Vessel'}</strong>
+                </span>
               </div>
             </div>
           </div>
@@ -736,8 +851,12 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white font-cinzel">Recent RFQs</h3>
-                <span className="text-xs text-slate-400 font-mono">({filteredQuotes.length} active)</span>
+                <h3 className="text-sm font-bold text-white font-cinzel">
+                  {isAr ? 'أحدث طلبات التسعير' : 'Recent RFQs'}
+                </h3>
+                <span className="text-xs text-slate-400 font-mono">
+                  (<span dir="ltr" className="unicode-isolate">{filteredQuotes.length}</span> {isAr ? 'نشط' : 'active'})
+                </span>
               </div>
 
               {/* Status Filter */}
@@ -747,27 +866,27 @@ export const AdminDashboardPage: React.FC = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="bg-[#0B2545] border border-white/15 rounded-lg px-2.5 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-400"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="New">New</option>
-                  <option value="In Review">In Review</option>
-                  <option value="Quoted (60m)">Quoted (60m)</option>
-                  <option value="Order Confirmed">Order Confirmed</option>
-                  <option value="Dispatched">Dispatched</option>
-                  <option value="Delivered">Delivered</option>
+                  <option value="ALL">{isAr ? 'جميع الحالات' : 'All Statuses'}</option>
+                  <option value="New">{isAr ? 'جديد' : 'New'}</option>
+                  <option value="In Review">{isAr ? 'قيد المراجعة' : 'In Review'}</option>
+                  <option value="Quoted (60m)">{isAr ? 'تم التسعير (60 دقيقة)' : 'Quoted (60m)'}</option>
+                  <option value="Order Confirmed">{isAr ? 'تم تأكيد الطلب' : 'Order Confirmed'}</option>
+                  <option value="Dispatched">{isAr ? 'تم الإرسال' : 'Dispatched'}</option>
+                  <option value="Delivered">{isAr ? 'تم التسليم' : 'Delivered'}</option>
                 </select>
               </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left rtl:text-right text-xs">
                 <thead className="text-[10px] uppercase font-bold text-slate-400 border-b border-white/10 bg-white/5">
                   <tr>
-                    <th className="py-2.5 px-3">Vessel</th>
-                    <th className="py-2.5 px-3">Date / ETA</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3 text-right">Action</th>
+                    <th className="py-2.5 px-3">{isAr ? 'السفينة' : 'Vessel'}</th>
+                    <th className="py-2.5 px-3">{isAr ? 'التاريخ وموعد الوصول' : 'Date / ETA'}</th>
+                    <th className="py-2.5 px-3">{isAr ? 'الخدمة المطلوبة' : 'Category'}</th>
+                    <th className="py-2.5 px-3">{isAr ? 'الحالة' : 'Status'}</th>
+                    <th className="py-2.5 px-3 text-right rtl:text-left">{isAr ? 'الإجراء' : 'Action'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -779,18 +898,20 @@ export const AdminDashboardPage: React.FC = () => {
                           <span>{quote.vesselName}</span>
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">
-                          IMO {quote.imoNumber} • {quote.companyName}
+                          <span dir="ltr" className="unicode-isolate">IMO {quote.imoNumber}</span> • {quote.companyName}
                         </div>
                       </td>
 
                       <td className="py-3 px-3">
-                        <div className="text-slate-200 font-medium">{quote.etaDate}</div>
+                        <div className="text-slate-200 font-medium">
+                          <span dir="ltr" className="unicode-isolate">{quote.etaDate}</span>
+                        </div>
                         <div className="text-[10px] text-slate-400">{quote.portOfCall}</div>
                       </td>
 
                       <td className="py-3 px-3">
                         <span className="text-[11px] text-slate-300">
-                          {quote.services.join(', ') || 'Provisions & Technical'}
+                          {quote.services.join(', ') || (isAr ? 'مؤن وخدمات فنية' : 'Provisions & Technical')}
                         </span>
                       </td>
 
@@ -806,17 +927,17 @@ export const AdminDashboardPage: React.FC = () => {
                               : 'bg-white/10 text-slate-300'
                           }`}
                         >
-                          {quote.status}
+                          {translateStatus(quote.status)}
                         </span>
                       </td>
 
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3 px-3 text-right rtl:text-left">
                         <button
                           type="button"
                           onClick={() => setSelectedQuote(quote)}
                           className="bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 hover:text-white px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors"
                         >
-                          Manage
+                          {isAr ? 'إدارة' : 'Manage'}
                         </button>
                       </td>
                     </tr>
@@ -831,9 +952,13 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-bold text-white font-cinzel">Top Customers</h3>
+                <h3 className="text-sm font-bold text-white font-cinzel">
+                  {isAr ? 'أهم العملاء' : 'Top Customers'}
+                </h3>
               </div>
-              <span className="text-xs text-slate-400">Total Billed</span>
+              <span className="text-xs text-slate-400">
+                {isAr ? 'إجمالي الفواتير' : 'Total Billed'}
+              </span>
             </div>
 
             <div className="space-y-2.5">
@@ -846,16 +971,19 @@ export const AdminDashboardPage: React.FC = () => {
                     <span className="text-base">{cust.flag}</span>
                     <div>
                       <h4 className="text-xs font-bold text-white">{cust.name}</h4>
-                      <span className="text-[10px] text-slate-400">{cust.volume} Total volume</span>
+                      <span className="text-[10px] text-slate-400">
+                        <span dir="ltr" className="unicode-isolate font-mono font-bold text-slate-300">{cust.volume}</span>{' '}
+                        {isAr ? 'إجمالي التعامل' : 'Total volume'}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right rtl:text-left">
                     <span className="text-xs font-bold font-mono text-amber-400 block">
-                      {cust.orders} Orders
+                      <span dir="ltr" className="unicode-isolate">{cust.orders}</span> {isAr ? 'طلبات' : 'Orders'}
                     </span>
                     <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      {cust.rating}
+                      {translateRating(cust.rating)}
                     </span>
                   </div>
                 </div>
@@ -867,17 +995,17 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* MODAL: QUOTE PRICING & DISPATCH DRAWER */}
       {selectedQuote && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4" dir={isAr ? 'rtl' : 'ltr'}>
           <div className="bg-[#0B2545] border border-white/20 rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-100 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
                 <Ship className="w-6 h-6 text-amber-400" />
                 <div>
                   <h3 className="text-lg font-bold text-white font-cinzel">
-                    Manage RFQ: {selectedQuote.vesselName}
+                    {isAr ? `إدارة طلب التسعير: ${selectedQuote.vesselName}` : `Manage RFQ: ${selectedQuote.vesselName}`}
                   </h3>
                   <p className="text-xs text-slate-400 font-mono">
-                    Ref: {selectedQuote.id} • IMO: {selectedQuote.imoNumber}
+                    <span dir="ltr" className="unicode-isolate">Ref: {selectedQuote.id} • IMO: {selectedQuote.imoNumber}</span>
                   </p>
                 </div>
               </div>
@@ -893,35 +1021,36 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">
-                    Quoted Total Price (USD)
+                    {isAr ? 'إجمالي السعر المعروض (دولار أمريكي)' : 'Quoted Total Price (USD)'}
                   </label>
                   <div className="relative">
-                    <DollarSign className="w-4 h-4 text-emerald-400 absolute left-3 top-2.5" />
+                    <DollarSign className={`w-4 h-4 text-emerald-400 absolute ${isAr ? 'right-3' : 'left-3'} top-2.5`} />
                     <input
                       type="number"
+                      dir="ltr"
                       value={editQuotedAmount}
                       onChange={(e) => setEditQuotedAmount(e.target.value)}
-                      placeholder="e.g. 14500"
-                      className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      placeholder="14500"
+                      className={`w-full ${isAr ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'} py-2 bg-white/5 border border-white/20 rounded-xl text-white font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400`}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">
-                    Update RFQ Status
+                    {isAr ? 'تحديث حالة طلب التسعير' : 'Update RFQ Status'}
                   </label>
                   <select
                     value={selectedQuote.status}
                     onChange={(e) => handleStatusChange(selectedQuote.id, e.target.value as RFQStatus)}
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white font-bold focus:outline-none focus:ring-2 focus:ring-sky-400"
                   >
-                    <option value="New">New (Initial Submission)</option>
-                    <option value="In Review">In Review (Operations Desk)</option>
-                    <option value="Quoted (60m)">Quoted (60m) (Priced & Issued)</option>
-                    <option value="Order Confirmed">Order Confirmed (Master Approved)</option>
-                    <option value="Dispatched">Dispatched (Customs Free Zone / Launch Boat)</option>
-                    <option value="Delivered">Delivered (Completed at Anchorage/Berth)</option>
+                    <option value="New">{isAr ? 'جديد (تقديم أولي)' : 'New (Initial Submission)'}</option>
+                    <option value="In Review">{isAr ? 'قيد المراجعة (مكتب العمليات)' : 'In Review (Operations Desk)'}</option>
+                    <option value="Quoted (60m)">{isAr ? 'تم التسعير (60 دقيقة) (تم التسعير والإرسال)' : 'Quoted (60m) (Priced & Issued)'}</option>
+                    <option value="Order Confirmed">{isAr ? 'تم تأكيد الطلب (معتمد من الربان)' : 'Order Confirmed (Master Approved)'}</option>
+                    <option value="Dispatched">{isAr ? 'تم الإرسال (المنطقة الحرة / لنش الإمداد)' : 'Dispatched (Customs Free Zone / Launch Boat)'}</option>
+                    <option value="Delivered">{isAr ? 'تم التسليم (اكتمل في المخطاف/الرصيف)' : 'Delivered (Completed at Anchorage/Berth)'}</option>
                   </select>
                 </div>
               </div>
@@ -929,26 +1058,26 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">
-                    Assigned Dispatch Officer
+                    {isAr ? 'ضابط الإرسال المعين' : 'Assigned Dispatch Officer'}
                   </label>
                   <input
                     type="text"
                     value={editOfficer}
                     onChange={(e) => setEditOfficer(e.target.value)}
-                    placeholder="Capt. Tarek Mansour"
+                    placeholder={isAr ? 'القبطان طارق منصور' : 'Capt. Tarek Mansour'}
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">
-                    Port Launch Boat
+                    {isAr ? 'لنش التموين والإمداد' : 'Port Launch Boat'}
                   </label>
                   <input
                     type="text"
                     value={editLaunchBoat}
                     onChange={(e) => setEditLaunchBoat(e.target.value)}
-                    placeholder="Mentors Star I (Suez Anchorage)"
+                    placeholder={isAr ? 'مينتورز ستار 1 (مخطاف السويس)' : 'Mentors Star I (Suez Anchorage)'}
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
@@ -956,13 +1085,17 @@ export const AdminDashboardPage: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1">
-                  Customs & Operational Dispatch Notes
+                  {isAr ? 'ملاحظات الجمارك والعمليات التشغيلية' : 'Customs & Operational Dispatch Notes'}
                 </label>
                 <textarea
                   rows={3}
                   value={editAdminNotes}
                   onChange={(e) => setEditAdminNotes(e.target.value)}
-                  placeholder="HACCP certificate attached, bonded goods cleared with Port Said Customs..."
+                  placeholder={
+                    isAr
+                      ? 'مرفق شهادة الجودة والسلامة الغذائية HACCP، تم تخليص البضائع المعفاة جمركياً مع جمارك بورسعيد والسويس...'
+                      : 'HACCP certificate attached, bonded goods cleared with Port Said Customs...'
+                  }
                   className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
                 />
               </div>
@@ -973,13 +1106,13 @@ export const AdminDashboardPage: React.FC = () => {
                   onClick={() => setSelectedQuote(null)}
                   className="px-4 py-2 text-slate-300 hover:text-white font-bold"
                 >
-                  Cancel
+                  {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="bg-[#C81D25] hover:bg-[#a8161d] text-white px-5 py-2 rounded-xl font-bold transition-all shadow-md"
                 >
-                  Save Quotation & Issue to Client
+                  {isAr ? 'حفظ العرض وإرساله للعميل' : 'Save Quotation & Issue to Client'}
                 </button>
               </div>
             </form>

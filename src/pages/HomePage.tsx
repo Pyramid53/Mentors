@@ -170,7 +170,7 @@ export const HomePage: React.FC = () => {
                 <h4 className="text-xs sm:text-sm font-bold text-[#0B2545] leading-tight">
                   {languageStore.t('feat_tech')}
                 </h4>
-                <p className="text-[11px] text-slate-500">IMPA & ISSA</p>
+                <p className="text-[11px] text-slate-500">{isAr ? 'أكواد IMPA & ISSA' : 'IMPA & ISSA'}</p>
               </div>
             </Link>
 
@@ -228,10 +228,10 @@ export const HomePage: React.FC = () => {
       {/* 3. NUMERICAL STATS BAND */}
       <section className="bg-white py-12 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-slate-100">
             <div className="pt-4 lg:pt-0">
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight">
-                500+
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">500+</span>
               </span>
               <p className="text-sm font-semibold text-slate-700 uppercase tracking-wider mt-1">
                 {languageStore.t('stat_vessels')}
@@ -240,8 +240,8 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="pt-4 lg:pt-0">
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight">
-                50+
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">50+</span>
               </span>
               <p className="text-sm font-semibold text-slate-700 uppercase tracking-wider mt-1">
                 {languageStore.t('stat_clients')}
@@ -250,8 +250,8 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="pt-4 lg:pt-0">
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#C81D25] block font-cinzel tracking-tight">
-                24/7
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#C81D25] block font-cinzel tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">24/7</span>
               </span>
               <p className="text-sm font-semibold text-slate-700 uppercase tracking-wider mt-1">
                 {languageStore.t('stat_support')}
@@ -260,8 +260,8 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="pt-4 lg:pt-0">
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight">
-                100%
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] block font-cinzel tracking-tight" dir="ltr">
+                <span className="inline-block unicode-isolate font-mono">100%</span>
               </span>
               <p className="text-sm font-semibold text-slate-700 uppercase tracking-wider mt-1">
                 {languageStore.t('stat_quality')}
@@ -340,13 +340,15 @@ export const HomePage: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B2545]/80 via-transparent to-transparent"></div>
                 <div className="absolute bottom-6 left-6 right-6 text-white">
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                    Suez Logistics Hub
+                    {isAr ? 'مركز السويس اللوجستي' : 'Suez Logistics Hub'}
                   </span>
                   <h3 className="text-xl font-bold font-cinzel mt-1">
                     {isAr ? 'أسطول جاهز لخدمة قوافل الشمال والجنوب' : 'Ready For Northbound & Southbound Convoys'}
                   </h3>
                   <p className="text-xs text-slate-200 mt-1">
-                    Port Tawfik • Suez Anchorage • Ain Sokhna • Adabiya • Port Said
+                    {isAr
+                      ? 'بورتوفيق • مخططاف السويس • العين السخنة • الأدبية • بورسعيد'
+                      : 'Port Tawfik • Suez Anchorage • Ain Sokhna • Adabiya • Port Said'}
                   </p>
                 </div>
               </div>

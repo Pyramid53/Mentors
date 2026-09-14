@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Anchor,
@@ -12,24 +12,34 @@ import {
   Compass
 } from 'lucide-react';
 import { MOCK_PORTS } from '../data/mockData';
+import { languageStore, Language } from '../services/languageStore';
 
 export const PortsPage: React.FC = () => {
-  const [selectedPort, setSelectedPort] = useState(MOCK_PORTS[0]);
+  const [currentLang, setCurrentLang] = useState<Language>(languageStore.getLanguage());
+
+  useEffect(() => {
+    const unsub = languageStore.subscribe((l) => setCurrentLang(l));
+    return () => unsub();
+  }, []);
+
+  const isAr = currentLang === 'ar';
 
   return (
-    <div className="w-full bg-slate-50 min-h-screen py-10 sm:py-16">
+    <div className="w-full bg-slate-50 min-h-screen py-10 sm:py-16 font-sans" id="ports-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 bg-sky-100 text-sky-800 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
             <Compass className="w-3.5 h-3.5 text-sky-600" />
-            <span>Strategic Egyptian Maritime Coverage</span>
+            <span>{isAr ? 'تغطية بحرية شاملة للموانئ المصرية' : 'Strategic Egyptian Maritime Coverage'}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] font-cinzel tracking-tight">
-            Ports We Serve
+            {languageStore.t('nav_ports')}
           </h1>
           <p className="text-slate-600 text-base sm:text-lg mt-2 font-medium">
-            24/7 provision delivery across all major Egyptian waterways, anchorages, and container terminals.
+            {isAr
+              ? 'تموين بحري على مدار 24/7 يغطي كافة الموانئ، ومناطق المخطاف، ومحطات الحاويات بقناة السويس والبحر الأحمر والمتوسط.'
+              : '24/7 provision delivery across all major Egyptian waterways, anchorages, and container terminals.'}
           </p>
         </div>
 
@@ -46,30 +56,35 @@ export const PortsPage: React.FC = () => {
                     <Anchor className="w-5 h-5 text-sky-300" />
                   </div>
                   <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-700">
-                    {port.type}
+                    {isAr ? (port.typeAr || port.type) : port.type}
                   </span>
                 </div>
 
                 <h3 className="text-xl font-bold text-[#0B2545] font-cinzel">
-                  {port.name}
+                  {isAr ? (port.nameAr || port.name) : port.name}
                 </h3>
-                <p className="text-xs text-sky-700 font-mono mt-0.5 mb-3 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>{port.coordinates}</span>
+                <p className="text-xs text-sky-700 mt-0.5 mb-3 flex items-center gap-1.5" dir="ltr">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span className="font-mono inline-block unicode-isolate font-semibold">{port.coordinates}</span>
                 </p>
 
                 <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4">
-                  {port.description}
+                  {isAr ? (port.descriptionAr || port.description) : port.description}
                 </p>
 
                 {/* Capabilities / Services */}
                 <div className="space-y-1.5 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400">
-                    <span>Supply Services</span>
-                    <span className="text-sky-700">Launch: {port.avgLaunchTime}</span>
+                    <span>{isAr ? 'الخدمات المتوفرة' : 'Supply Services'}</span>
+                    <span className="text-sky-700 flex items-center gap-1">
+                      <span>{isAr ? 'زمن وصول اللنش:' : 'Launch:'}</span>
+                      <strong dir="ltr" className="inline-block unicode-isolate font-mono">
+                        {isAr ? (port.avgLaunchTimeAr || port.avgLaunchTime) : port.avgLaunchTime}
+                      </strong>
+                    </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {port.servicesAvailable.map((srv, idx) => (
+                    {((isAr && port.servicesAvailableAr) ? port.servicesAvailableAr : port.servicesAvailable).map((srv, idx) => (
                       <span
                         key={idx}
                         className="text-[11px] font-medium bg-slate-50 border border-slate-200 text-slate-700 px-2 py-0.5 rounded"
@@ -84,15 +99,16 @@ export const PortsPage: React.FC = () => {
               <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between">
                 <Link
                   to="/contact"
-                  className="text-xs font-bold text-slate-600 hover:text-[#0B2545]"
+                  className="text-xs font-bold text-slate-600 hover:text-[#0B2545] flex items-center gap-1"
                 >
-                  Contact Port Agent →
+                  <span>{isAr ? 'التواصل مع وكيل الميناء' : 'Contact Port Agent'}</span>
+                  <ArrowRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
                 </Link>
                 <Link
-                  to={`/get-a-quote?port=${encodeURIComponent(port.name)}`}
+                  to={`/get-a-quote?port=${encodeURIComponent(isAr ? (port.nameAr || port.name) : port.name)}`}
                   className="bg-[#D0201E] hover:bg-[#b01716] text-white font-bold text-xs px-3.5 py-1.5 rounded-md shadow transition-colors"
                 >
-                  Quote for this Port
+                  {isAr ? 'طلب تسعير لهذا الميناء' : 'Quote for this Port'}
                 </Link>
               </div>
             </div>
@@ -107,10 +123,14 @@ export const PortsPage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-base font-bold text-[#0B2545] font-cinzel">
-                Anchorage & Offshore Launch Supply Guarantee
+                {isAr
+                  ? 'ضمان التوريد السريع إلى المخطاف ومناطق الانتظار الخارجية'
+                  : 'Anchorage & Offshore Launch Supply Guarantee'}
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                Our fleet of specialized refrigerated workboats serves vessels anchored in Suez V-Zone, Green Island, and Port Said Mediterranean Roads 24 hours a day without requiring vessel berthing.
+                {isAr
+                  ? 'يقدم أسطول لنشاتنا المجهزة والمبردة خدمات التوريد للسفن الراسية في منطقة V-Zone بالسويس، والجزيرة الخضراء، ومخطاف بورسعيد بالبحر المتوسط على مدار 24 ساعة دون الحاجة لتراكي السفينة على الرصيف.'
+                  : 'Our fleet of specialized refrigerated workboats serves vessels anchored in Suez V-Zone, Green Island, and Port Said Mediterranean Roads 24 hours a day without requiring vessel berthing.'}
               </p>
             </div>
           </div>
@@ -119,7 +139,7 @@ export const PortsPage: React.FC = () => {
             to="/get-a-quote"
             className="bg-[#0B2545] hover:bg-[#12345C] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg whitespace-nowrap shadow shrink-0"
           >
-            Arrange Anchorage Delivery
+            {isAr ? 'ترتيب تموين في المخطاف' : 'Arrange Anchorage Delivery'}
           </Link>
         </div>
       </div>
