@@ -142,15 +142,23 @@ export const ClientPortalPage: React.FC = () => {
     const loadQuotes = () => {
       const all = requestStore.getQuoteRequests();
       if (currentUser) {
-        const userCompany = currentUser.company.toLowerCase();
-        const matched = all.filter(
-          (q) =>
-            q.companyName.toLowerCase().includes(userCompany) ||
-            q.contactEmail.toLowerCase() === currentUser.email.toLowerCase()
-        );
-        setClientQuotes(matched.length > 0 ? matched : all.slice(0, 4));
+        const userEmail = (currentUser.email || '').trim().toLowerCase();
+        const userCompany = (currentUser.company || '').trim().toLowerCase();
+        const matched = all.filter((q) => {
+          const qEmail = (q.contactEmail || '').trim().toLowerCase();
+          const qCompany = (q.companyName || '').trim().toLowerCase();
+          const emailMatch = qEmail.length > 0 && qEmail === userEmail;
+          // Exact company match only if both have a specific company name and emails are not conflicting
+          const companyMatch =
+            userCompany.length >= 3 &&
+            qCompany.length >= 3 &&
+            qCompany === userCompany &&
+            (qEmail === '' || qEmail === userEmail);
+          return emailMatch || companyMatch;
+        });
+        setClientQuotes(matched);
       } else {
-        setClientQuotes(all.slice(0, 4));
+        setClientQuotes([]);
       }
     };
 
@@ -625,7 +633,7 @@ export const ClientPortalPage: React.FC = () => {
                 </div>
                 <div className="text-2xl font-bold text-emerald-600 mt-2 font-cinzel">
                   <span dir="ltr" className="unicode-isolate">
-                    {clientQuotes.filter((q) => q.status === 'APPROVED' || q.status === 'IN_CLEARANCE').length || 1}
+                    {clientQuotes.filter((q) => q.status === 'APPROVED' || q.status === 'IN_CLEARANCE' || q.status === 'Order Confirmed').length}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
@@ -684,96 +692,121 @@ export const ClientPortalPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left rtl:text-right text-sm">
-                  <thead className="bg-slate-50 text-slate-600 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="py-3.5 px-6">{isAr ? 'مرجع الطلب / السفينة' : 'Quote Ref / Vessel'}</th>
-                      <th className="py-3.5 px-6">{isAr ? 'الميناء وموعد الوصول' : 'Port & ETA'}</th>
-                      <th className="py-3.5 px-6">{isAr ? 'نطاق التوريد' : 'Supply Scope'}</th>
-                      <th className="py-3.5 px-6">{isAr ? 'الحالة' : 'Status'}</th>
-                      <th className="py-3.5 px-6">{isAr ? 'المبلغ (دولار أمريكي)' : 'Amount (USD)'}</th>
-                      <th className="py-3.5 px-6 text-right rtl:text-left">{isAr ? 'الإجراءات' : 'Actions'}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {clientQuotes.map((q) => (
-                      <tr key={q.id} className="hover:bg-slate-50/75 transition-colors">
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-[#0B2545] text-sm flex items-center gap-2">
-                            <Ship className="w-4 h-4 text-sky-700 shrink-0" />
-                            <span>{q.vesselName}</span>
-                          </div>
-                          <div className="text-slate-500 font-mono text-[11px] mt-0.5">
-                            <span dir="ltr" className="unicode-isolate">{q.id} • IMO {q.imoNumber}</span>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-6">
-                          <div className="font-medium text-slate-800">{q.portOfCall}</div>
-                          <div className="text-slate-500 text-[11px] flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span dir="ltr" className="unicode-isolate">{q.etaDate} {q.etaTime}</span>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-6">
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {q.services.map((s, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium"
-                              >
-                                {translateService(s)}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-6">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              q.status === 'QUOTED' || q.status === 'Quoted (60m)'
-                                ? 'bg-amber-100 text-amber-800'
-                                : q.status === 'APPROVED' || q.status === 'Order Confirmed'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : q.status === 'DELIVERED' || q.status === 'Delivered'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-slate-100 text-slate-800'
-                            }`}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                            {translateStatus(q.status)}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-6 font-mono font-bold text-slate-900 text-sm">
-                          {q.quotedAmount || q.quotedAmountUSD ? (
-                            <span dir="ltr" className="unicode-isolate">
-                              ${(q.quotedAmount || q.quotedAmountUSD || 0).toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 font-normal italic">
-                              {isAr ? 'جارٍ الاحتساب...' : 'Calculating...'}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-6 text-right rtl:text-left">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedQuoteForModal(q)}
-                            className="inline-flex items-center gap-1 bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-colors shadow-xs"
-                          >
-                            <span>{isAr ? 'عرض التفاصيل' : 'View Details'}</span>
-                            <ChevronRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
-                          </button>
-                        </td>
+              {clientQuotes.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-4">
+                    <Ship className="w-8 h-8 text-sky-700" />
+                  </div>
+                  <h3 className="text-base font-bold text-[#0B2545] font-cinzel">
+                    {isAr ? 'لا توجد طلبات تسعير مسجلة بعد' : 'No Requisitions Submitted Yet'}
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1.5 max-w-md mx-auto leading-relaxed">
+                    {isAr
+                      ? 'لم تقم بتقديم طلبات تسعير تموين سفن بعد. عند إرسال طلب جديد لتموين سفينتكم في السويس أو بورسعيد أو السخنة، ستظهر تفاصيل العرض وحالة قارب الإمداد والتخليص الجمركي هنا.'
+                      : 'You have not submitted any vessel procurement requests yet. When you request a quote for Suez transit provisions, technical stores, or bonded goods, your quotation breakdown and delivery timeline will appear here.'}
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      to="/get-a-quote"
+                      className="inline-flex items-center gap-2 bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>{isAr ? 'تقديم طلب تسعير لسفينتكم الآن' : 'Request Vessel Quotation Now'}</span>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto scrollbar-none">
+                  <table className="w-full text-left rtl:text-right text-sm min-w-[680px]">
+                    <thead className="bg-slate-50 text-slate-600 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6">{isAr ? 'مرجع الطلب / السفينة' : 'Quote Ref / Vessel'}</th>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6">{isAr ? 'الميناء وموعد الوصول' : 'Port & ETA'}</th>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6">{isAr ? 'نطاق التوريد' : 'Supply Scope'}</th>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6">{isAr ? 'الحالة' : 'Status'}</th>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6">{isAr ? 'المبلغ (دولار أمريكي)' : 'Amount (USD)'}</th>
+                        <th className="py-3 sm:py-3.5 px-4 sm:px-6 text-right rtl:text-left">{isAr ? 'الإجراءات' : 'Actions'}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {clientQuotes.map((q) => (
+                        <tr key={q.id} className="hover:bg-slate-50/75 transition-colors">
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6">
+                            <div className="font-bold text-[#0B2545] text-sm flex items-center gap-2">
+                              <Ship className="w-4 h-4 text-sky-700 shrink-0" />
+                              <span>{q.vesselName}</span>
+                            </div>
+                            <div className="text-slate-500 font-mono text-[11px] mt-0.5">
+                              <span dir="ltr" className="unicode-isolate">{q.id} • IMO {q.imoNumber}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6">
+                            <div className="font-medium text-slate-800">{q.portOfCall}</div>
+                            <div className="text-slate-500 text-[11px] flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span dir="ltr" className="unicode-isolate">{q.etaDate} {q.etaTime}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {q.services.map((s, idx) => (
+                                <span
+                                  key={idx}
+                                  className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium"
+                                >
+                                  {translateService(s)}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                q.status === 'QUOTED' || q.status === 'Quoted (60m)'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : q.status === 'APPROVED' || q.status === 'Order Confirmed'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : q.status === 'DELIVERED' || q.status === 'Delivered'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-slate-100 text-slate-800'
+                              }`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                              {translateStatus(q.status)}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6 font-mono font-bold text-slate-900 text-sm whitespace-nowrap">
+                            {q.quotedAmount || q.quotedAmountUSD ? (
+                              <span dir="ltr" className="unicode-isolate">
+                                ${(q.quotedAmount || q.quotedAmountUSD || 0).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic">
+                                {isAr ? 'جارٍ الاحتساب...' : 'Calculating...'}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 sm:py-4 px-4 sm:px-6 text-right rtl:text-left whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedQuoteForModal(q)}
+                              className="inline-flex items-center gap-1 bg-[#0B2545] hover:bg-[#13315C] text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-colors shadow-xs cursor-pointer"
+                            >
+                              <span>{isAr ? 'عرض التفاصيل' : 'View Details'}</span>
+                              <ChevronRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -916,22 +949,6 @@ export const ClientPortalPage: React.FC = () => {
                           : (isAr ? 'تسجيل الدخول' : 'Login')}
                       </span>
                     </button>
-
-                    {/* Quick Demo Client Credentials */}
-                    <div className="pt-4 border-t border-slate-100">
-                      <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-2 text-center">
-                        {isAr ? 'هل تحتاج إلى معاينة تجريبية فورية؟' : 'Need quick preview access?'}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleDemoClient}
-                        className="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold py-2 rounded-lg transition-colors text-center border border-sky-100"
-                      >
-                        {isAr
-                          ? 'حساب عميل تجريبي: القبطان ماركو روسي (MSC Geneva)'
-                          : 'Sample Client Account: Capt. Rossi (MSC Geneva)'}
-                      </button>
-                    </div>
                   </form>
                 ) : (
                   /* REGISTER FORM */

@@ -311,49 +311,49 @@ export const GetAQuotePage: React.FC = () => {
             {/* LEFT COLUMN: Tabbed Form (8 Cols on desktop) */}
             <div className="lg:col-span-8 bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
               {/* Tabs header */}
-              <div className="flex border-b border-slate-200 bg-slate-100/70 p-2 gap-2">
+              <div className="flex border-b border-slate-200 bg-slate-100/70 p-1.5 sm:p-2 gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setActiveTab('basic')}
-                  className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 min-w-[95px] sm:min-w-0 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
                     activeTab === 'basic'
                       ? 'bg-white text-[#0B2545] shadow-sm border border-slate-200'
                       : 'text-slate-600 hover:text-[#0B2545] hover:bg-white/60'
                   }`}
                 >
-                  <Ship className="w-4 h-4 text-sky-600" />
-                  <span>{isAr ? '١. بيانات السفينة' : '1. Basic Info'}</span>
+                  <Ship className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600 shrink-0" />
+                  <span className="truncate">{isAr ? '١. بيانات السفينة' : '1. Basic Info'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('list')}
-                  className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 min-w-[95px] sm:min-w-0 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
                     activeTab === 'list'
                       ? 'bg-white text-[#0B2545] shadow-sm border border-slate-200'
                       : 'text-slate-600 hover:text-[#0B2545] hover:bg-white/60'
                   }`}
                 >
-                  <UploadCloud className="w-4 h-4 text-[#D0201E]" />
-                  <span>{isAr ? '٢. قائمة المؤن والمهمات' : '2. Provision List'}</span>
+                  <UploadCloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D0201E] shrink-0" />
+                  <span className="truncate">{isAr ? '٢. قائمة المؤن' : '2. Provision List'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('additional')}
-                  className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 min-w-[95px] sm:min-w-0 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
                     activeTab === 'additional'
                       ? 'bg-white text-[#0B2545] shadow-sm border border-slate-200'
                       : 'text-slate-600 hover:text-[#0B2545] hover:bg-white/60'
                   }`}
                 >
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <span>{isAr ? '٣. التواصل والملاحظات' : '3. Additional Info'}</span>
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">{isAr ? '٣. التواصل' : '3. Additional Info'}</span>
                 </button>
               </div>
 
               {/* Tab Forms Content */}
-              <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
                 {/* TAB 1: BASIC INFO */}
                 {activeTab === 'basic' && (
                   <div className="space-y-5 animate-in fade-in duration-200">

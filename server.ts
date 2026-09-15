@@ -102,173 +102,25 @@ function dbRowToInquiry(r: any) {
   };
 }
 
-// Initial sample quotes to seed into empty Supabase tables
-const SEED_QUOTES = [
-  {
-    id: 'MMP-RFQ-98421',
-    submittedAt: '2026-05-12T13:42:00Z',
-    vesselName: 'MSC ORION',
-    imoNumber: '9857145',
-    vesselType: 'Container Ship (14,000 TEU)',
-    portOfCall: 'Suez Anchorage (V-Zone)',
-    etaDate: '2026-05-13',
-    etaTime: '18:00',
-    services: ['Fresh Provisions', 'Dry Stores & Beverages', 'Technical Stores'],
-    fileName: 'MSC_Orion_Suez_Stores_Indent_Rev2.xlsx',
-    fileSize: '1.45 MB',
-    selectedItems: [
-      'Mineral Water 1.5L (Case of 12)',
-      'USDA Boneless Beef (Halal)',
-      'Fresh Table Eggs Grade AA',
-      'Engine Oil 15W40 (208L Drum)',
-      '4G Suez Transit Data SIM Card (100GB)'
-    ],
-    crewNationalities: 'Mixed (24 Crew: Italian, Filipino, Ukrainian)',
-    priority: 'Urgent (< 30 Min)',
-    additionalNotes: 'Vessel is awaiting 04:00 northbound convoy slot. Need launch alongside at Waiting Area V before 22:00. Requires customs clearance stamped before boarding.',
-    contactName: 'Capt. Marco Rossi',
-    contactEmail: 'm.rossi@msc-operations.com',
-    contactPhone: '+39 340 551 2894',
-    companyName: 'Mediterranean Shipping Company (Geneva)',
-    status: 'In Review',
-    assignedOfficer: 'Capt. Tarek (Suez Desk)',
-    quotedAmountUSD: 18450,
-    dispatchLaunchBoat: 'Mentors Launch 02',
-    adminNotes: 'Spoke with local shipping agent GAC Suez. Launch 02 scheduled for 20:30 departure from Port Tawfik pier.',
-    lastUpdated: '10 mins ago'
-  },
-  {
-    id: 'MMP-RFQ-98405',
-    submittedAt: '2026-05-12T11:15:00Z',
-    vesselName: 'CMA CGM LOUVRE',
-    imoNumber: '9839129',
-    vesselType: 'LNG Dual-Fuel Container Vessel',
-    portOfCall: 'Port Said (North Convoy)',
-    etaDate: '2026-05-14',
-    etaTime: '06:00',
-    services: ['Fresh Provisions', 'Bonded Stores (Duty Free)', 'Crew Welfare & Wi-Fi'],
-    fileName: 'CMA_CGM_Louvre_Provisions_List_May.pdf',
-    fileSize: '890 KB',
-    selectedItems: [
-      'Fresh Egyptian Citrus & Bananas',
-      'Whole Chicken Grade A (Frozen)',
-      'Basmati Long Grain Rice 25KG',
-      'Marlboro Red Cigarettes (Duty Free)'
-    ],
-    crewNationalities: 'French & Filipino (28 crew)',
-    priority: 'Standard (60 Min)',
-    additionalNotes: 'Requires HACCP certified temperature printouts for all chilled poultry and fresh dairy.',
-    contactName: 'Jean-Luc Moreau',
-    contactEmail: 'jl.moreau@cma-cgm.com',
-    contactPhone: '+33 4 88 91 2000',
-    companyName: 'CMA CGM Marseilles',
-    status: 'Quoted (60m)',
-    assignedOfficer: 'Eng. Hany Mostafa',
-    quotedAmountUSD: 14200,
-    dispatchLaunchBoat: 'Mentors Launch 01',
-    adminNotes: 'Proforma quotation transmitted to superintendent. Awaiting master PO confirmation.',
-    lastUpdated: '25 mins ago'
-  },
-  {
-    id: 'MMP-RFQ-98389',
-    submittedAt: '2026-05-12T09:30:00Z',
-    vesselName: 'NORDIC BREEZE',
-    imoNumber: '9748231',
-    vesselType: 'Aframax Crude Oil Tanker',
-    portOfCall: 'Ain Sokhna Petroleum Basin',
-    etaDate: '2026-05-13',
-    etaTime: '12:00',
-    services: ['Safety & Pyrotechnics', 'Technical Stores', 'Fresh Water Supply'],
-    fileName: 'Nordic_Breeze_Safety_Spares_Indent.xlsx',
-    fileSize: '2.1 MB',
-    selectedItems: [
-      'Fresh Potable Water (150 Metric Tons)',
-      'Rocket Parachute Flares (SOLAS Approved)',
-      'Impeller Kit for Bilge Pump Model B-42'
-    ],
-    crewNationalities: 'Scandinavian & Croatian (21 crew)',
-    priority: 'Urgent (< 30 Min)',
-    additionalNotes: 'Barge water delivery connection 2.5 inch Storz coupling.',
-    contactName: 'Sarah Lindqvist',
-    contactEmail: 'superintendent@shipping.com',
-    contactPhone: '+47 902 33 412',
-    companyName: 'Nordic Tankers AS',
-    status: 'Order Confirmed',
-    assignedOfficer: 'Capt. Tarek (Suez Desk)',
-    quotedAmountUSD: 29800,
-    dispatchLaunchBoat: 'Mentors Water Barge 01',
-    adminNotes: 'PO #NT-2026-05-99 verified with bank guarantee. Barge scheduled for pumping at 13:30.',
-    lastUpdated: '1 hour ago'
-  }
-];
-
-const SEED_INQUIRIES = [
-  {
-    id: 'MM-INQ-1042',
-    submittedAt: '2026-05-12T14:10:00Z',
-    fullName: 'Capt. Henrik Lindholm',
-    email: 'h.lindholm@maersk-tankers.com',
-    phone: '+45 33 63 33 63',
-    company: 'Maersk Tankers Copenhagen',
-    inquiryType: 'Emergency Technical Stores',
-    portOfCall: 'Port of Suez',
-    message: 'Urgent inquiry regarding main engine cylinder lubricating oil delivery at Suez waiting zone V-4 before southbound transit. Need 12 drums 208L.',
-    status: 'In Review',
-    assignedTo: 'Capt. Tarek Mansour',
-    adminNotes: 'Shell Gadinia 40 in stock in Adabiya free-zone warehouse.'
-  },
-  {
-    id: 'MM-INQ-1039',
-    submittedAt: '2026-05-11T09:20:00Z',
-    fullName: 'Elena Rostova',
-    email: 'procurement@sovcomflot.com',
-    phone: '+7 495 660 4000',
-    company: 'SCF Management Services',
-    inquiryType: 'Fresh Provisions Requisition',
-    portOfCall: 'Port Said Container Terminal',
-    message: 'Requesting monthly provisions rate-card for container vessels calling Port Said regularly on Asia-Europe route.',
-    status: 'New',
-    assignedTo: 'Eng. Hany Mostafa',
-    adminNotes: 'Send 2026 standardized contract pricing sheet.'
-  }
-];
+// Clean initial state for production (no hardcoded test data)
+const SEED_QUOTES: any[] = [];
+const SEED_INQUIRIES: any[] = [];
 
 async function seedSupabaseIfEmpty() {
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
   try {
-    // Check quote_requests
-    const { count: quoteCount } = await supabase
+    // Purge any legacy mock records from database if present
+    await supabase
       .from('quote_requests')
-      .select('*', { count: 'exact', head: true });
+      .delete()
+      .in('id', ['MMP-RFQ-98421', 'MMP-RFQ-98405', 'MMP-RFQ-98389', 'MMP-RFQ-98388', 'MMP-RFQ-98310']);
 
-    if ((quoteCount || 0) < 3) {
-      console.log('Seeding initial quote requests to Supabase...');
-      const rows = SEED_QUOTES.map(quoteToDbRow);
-      const { error: seedError } = await supabase.from('quote_requests').upsert(rows, { onConflict: 'id' });
-      if (seedError) {
-        console.warn('Could not auto-seed quote_requests:', seedError.message);
-      } else {
-        console.log(`Successfully synced ${rows.length} quote requests to Supabase!`);
-      }
-    }
-
-    // Check contact_inquiries
-    const { count: inqCount } = await supabase
+    await supabase
       .from('contact_inquiries')
-      .select('*', { count: 'exact', head: true });
-
-    if (inqCount === 0) {
-      console.log('Seeding initial contact inquiries to Supabase...');
-      const inqRows = SEED_INQUIRIES.map(inquiryToDbRow);
-      const { error: inqError } = await supabase.from('contact_inquiries').insert(inqRows);
-      if (inqError) {
-        console.warn('Could not auto-seed contact_inquiries:', inqError.message);
-      } else {
-        console.log(`Successfully seeded ${inqRows.length} contact inquiries to Supabase!`);
-      }
-    }
+      .delete()
+      .in('id', ['MM-INQ-1042', 'MM-INQ-1039', 'INQ-4821', 'INQ-4815', 'INQ-4798']);
 
     // Check and seed app_users (ensuring admin@mentors.com exists with owner credentials)
     const seedAdminUser = {
@@ -282,29 +134,6 @@ async function seedSupabaseIfEmpty() {
       password_hash: 'tarekmentorsowner'
     };
 
-    const clientUsers = [
-      {
-        id: 'USR-CLT-01',
-        name: 'Capt. Marco Rossi',
-        email: 'm.rossi@msc-operations.com',
-        company: 'Mediterranean Shipping Company (Geneva)',
-        role: 'client',
-        phone: '+39 340 551 2894',
-        avatar_initials: 'MR',
-        password_hash: 'client123'
-      },
-      {
-        id: 'USR-CLT-02',
-        name: 'Sarah Lindqvist',
-        email: 'superintendent@shipping.com',
-        company: 'Nordic Tankers AS',
-        role: 'client',
-        phone: '+47 902 33 412',
-        avatar_initials: 'SL',
-        password_hash: 'shipping123'
-      }
-    ];
-
     // Always ensure admin@mentors.com exists with admin role in database
     const { error: adminUpsertError } = await supabase
       .from('app_users')
@@ -313,7 +142,7 @@ async function seedSupabaseIfEmpty() {
     if (adminUpsertError) {
       console.warn('Could not sync app_users to Supabase:', adminUpsertError.message);
     } else {
-      console.log('Successfully synced admin account (admin@mentors.com) to Supabase app_users table!');
+      console.log('Verified admin account (admin@mentors.com) in Supabase app_users table!');
     }
   } catch (err: any) {
     console.warn('Seeding check error:', err?.message || err);
@@ -332,28 +161,6 @@ const SERVER_USERS: any[] = [
     avatar_initials: 'TM',
     password_hash: 'tarekmentorsowner',
     created_at: '2025-01-10T08:00:00Z'
-  },
-  {
-    id: 'USR-CLT-01',
-    name: 'Capt. Marco Rossi',
-    email: 'm.rossi@msc-operations.com',
-    company: 'Mediterranean Shipping Company (Geneva)',
-    role: 'client',
-    phone: '+39 340 551 2894',
-    avatar_initials: 'MR',
-    password_hash: 'client123',
-    created_at: '2025-03-15T10:30:00Z'
-  },
-  {
-    id: 'USR-CLT-02',
-    name: 'Sarah Lindqvist',
-    email: 'superintendent@shipping.com',
-    company: 'Nordic Tankers AS',
-    role: 'client',
-    phone: '+47 902 33 412',
-    avatar_initials: 'SL',
-    password_hash: 'shipping123',
-    created_at: '2025-04-02T12:00:00Z'
   }
 ];
 
@@ -584,6 +391,22 @@ async function startServer() {
       }
 
       return res.status(201).json({ source: 'supabase', data: dbRowToInquiry(data) });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/inquiries/:id - Remove contact inquiry from Supabase
+  app.delete('/api/inquiries/:id', async (req, res) => {
+    const { id } = req.params;
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return res.json({ success: true, id });
+    }
+    try {
+      const { error } = await supabase.from('contact_inquiries').delete().eq('id', id);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true, id });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }

@@ -121,38 +121,38 @@ export const Footer: React.FC = () => {
         </div>
       </div>
       {/* Upper CTA Banner */}
-      <div className="bg-[#050D1A] border-b border-white/10 py-8">
+      <div className="bg-[#050D1A] border-b border-white/10 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4 text-center md:text-left">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left rtl:sm:text-right">
               <div className="w-12 h-12 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
                 <Clock className="w-6 h-6 text-red-400 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white tracking-wide">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
                   {isAr
                     ? 'هل تحتاج إلى عرض أسعار فوري لعبور قناة السويس؟'
                     : 'Need an Immediate Quotation for Suez Transit?'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300">
+                <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
                   {isAr
                     ? 'فريق العمليات متواجد على مدار 24 ساعة لتقديم أفضل الأسعار خلال 60 دقيقة فقط.'
                     : 'Our 24/7 provisioning desk guarantees a tailored, competitive price within 60 minutes.'}
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
               <a
                 href="https://wa.me/201008924477"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md"
+                className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
               >
                 <span>{isAr ? 'واتساب العمليات 24/7' : 'WhatsApp 24/7 Ops'}</span>
               </a>
               <Link
                 to="/get-a-quote"
-                className="inline-flex items-center gap-2 bg-[#C81D25] hover:bg-[#a8161d] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg active:scale-95"
+                className="inline-flex items-center justify-center gap-2 bg-[#C81D25] hover:bg-[#a8161d] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg active:scale-95"
               >
                 <span>{isAr ? 'طلب عرض أسعار (60 دقيقة)' : 'Get a Quote in 60 Mins'}</span>
                 <ArrowRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />

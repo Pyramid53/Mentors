@@ -101,177 +101,47 @@ function inquiryToDbRow(i: AdminContactInquiry) {
   };
 }
 
-// Seed initial realistic data so admin desk is immediately rich and functional
-const INITIAL_QUOTES: AdminQuoteRequest[] = [
-  {
-    id: 'MMP-RFQ-98421',
-    submittedAt: '2026-05-12T13:42:00Z',
-    vesselName: 'MSC ORION',
-    imoNumber: '9857145',
-    portOfCall: 'Suez Anchorage (V-Zone)',
-    etaDate: '2026-05-13',
-    etaTime: '18:00',
-    services: ['Fresh Provisions', 'Dry Stores & Beverages', 'Technical Stores'],
-    fileName: 'MSC_Orion_Suez_Stores_Indent_Rev2.xlsx',
-    fileSize: '1.45 MB',
-    selectedItems: [
-      'Mineral Water 1.5L (Case of 12)',
-      'USDA Boneless Beef (Halal)',
-      'Fresh Table Eggs Grade AA',
-      'Engine Oil 15W40 (208L Drum)',
-      '4G Suez Transit Data SIM Card (100GB)'
-    ],
-    crewNationalities: 'Mixed (24 Crew: Italian, Filipino, Ukrainian)',
-    priority: 'Urgent (< 30 Min)',
-    additionalNotes: 'Vessel is awaiting 04:00 northbound convoy slot. Need launch alongside at Waiting Area V before 22:00. Requires customs clearance stamped before boarding.',
-    contactName: 'Capt. Marco Rossi',
-    contactEmail: 'm.rossi@msc-operations.com',
-    contactPhone: '+39 340 551 2894',
-    companyName: 'Mediterranean Shipping Company (Geneva)',
-    status: 'In Review',
-    assignedOfficer: 'Capt. Tarek (Suez Desk)',
-    quotedAmountUSD: 18450,
-    dispatchLaunchBoat: 'Mentors Launch 02',
-    adminNotes: 'Spoke with local shipping agent GAC Suez. Launch 02 scheduled for 20:30 departure from Port Tawfik pier.',
-    lastUpdated: '10 mins ago'
-  },
-  {
-    id: 'MMP-RFQ-98405',
-    submittedAt: '2026-05-12T11:15:00Z',
-    vesselName: 'CMA CGM LOUVRE',
-    imoNumber: '9839129',
-    portOfCall: 'Port Said (North Convoy)',
-    etaDate: '2026-05-14',
-    etaTime: '06:00',
-    services: ['Fresh Provisions', 'Bonded Stores (Duty Free)', 'Crew Welfare & Wi-Fi'],
-    fileName: 'CMA_CGM_Louvre_Provisions_List_May.pdf',
-    fileSize: '890 KB',
-    selectedItems: [
-      'Fresh Egyptian Citrus & Bananas',
-      'Whole Chicken Grade A (Frozen)',
-      'Basmati Long Grain Rice 25KG',
-      'Marlboro Red Cigarettes (Duty Free)'
-    ],
-    crewNationalities: 'French & Filipino (28 crew)',
-    priority: 'Standard (60 Min)',
-    additionalNotes: 'Requires HACCP certified temperature printouts for all chilled poultry and fresh dairy.',
-    contactName: 'Jean-Luc Moreau',
-    contactEmail: 'jl.moreau@cmacgm-fleet.fr',
-    contactPhone: '+33 4 88 91 22 00',
-    companyName: 'CMA CGM Ship Management',
-    status: 'Quoted (60m)',
-    assignedOfficer: 'Eng. Mostafa (Port Said Desk)',
-    quotedAmountUSD: 24800,
-    dispatchLaunchBoat: 'Mentors Launch 04',
-    adminNotes: 'Quotation sent via email and WhatsApp. Awaiting superintendent PO confirmation.',
-    lastUpdated: '1 hour ago'
-  },
-  {
-    id: 'MMP-RFQ-98388',
-    submittedAt: '2026-05-12T08:30:00Z',
-    vesselName: 'NORDIC SPIRIT',
-    imoNumber: '9429112',
-    portOfCall: 'Ain Sokhna Tanker Terminal',
-    etaDate: '2026-05-13',
-    etaTime: '06:15',
-    services: ['Technical Stores', 'Deck & Engine Spares', 'Fresh Water Supply'],
-    fileName: 'Nordic_Spirit_IMPA_Engine_Deck.xlsx',
-    fileSize: '2.10 MB',
-    selectedItems: [
-      'Mooring Rope 8-Strand 56mm x 220m',
-      'Engine Oil 15W40 (208L Drum)',
-      'Mineral Water 1.5L (Case of 12)'
-    ],
-    crewNationalities: 'Scandinavian & Polish (21 crew)',
-    priority: 'Anchorage Delivery',
-    additionalNotes: 'Tanker discharging at Sokhna SPM berth 2. Safety helmets and ATEX-certified radios mandatory on launch boat.',
-    contactName: 'Henrik Lindberg',
-    contactEmail: 'h.lindberg@nordictankers.no',
-    contactPhone: '+47 902 33 412',
-    companyName: 'Nordic Tankers AS',
-    status: 'Order Confirmed',
-    assignedOfficer: 'Capt. Tarek (Suez Desk)',
-    quotedAmountUSD: 31200,
-    dispatchLaunchBoat: 'Mentors Launch 01',
-    adminNotes: 'PO #NT-2026-091 received. Provisions and mooring lines loaded in refrigerated warehouse.',
-    lastUpdated: '3 hours ago'
-  },
-  {
-    id: 'MMP-RFQ-98310',
-    submittedAt: '2026-05-11T16:20:00Z',
-    vesselName: 'ANJI FORTUNE',
-    imoNumber: '9281234',
-    portOfCall: 'Port of Suez & Port Tawfik',
-    etaDate: '2026-05-12',
-    etaTime: '14:30',
-    services: ['Fresh Provisions', 'Dry Stores & Beverages'],
-    fileName: 'AnjiFortune_Halal_Stores.pdf',
-    fileSize: '450 KB',
-    selectedItems: [
-      'USDA Boneless Beef (Halal)',
-      'Fresh Table Eggs Grade AA',
-      'Fresh Egyptian Citrus & Bananas'
-    ],
-    crewNationalities: 'Chinese & Indonesian (22 crew)',
-    priority: 'Standard (60 Min)',
-    additionalNotes: 'All beef and poultry must be certified 100% Halal with Egyptian Islamic Authority stamp.',
-    contactName: 'Capt. Zhang Wei',
-    contactEmail: 'master.anjifortune@cosco-bulk.cn',
-    contactPhone: '+86 21 6888 1234',
-    companyName: 'Cosco Shipping Bulk Co.',
-    status: 'Dispatched',
-    assignedOfficer: 'Chandlery Officer Karim',
-    quotedAmountUSD: 12900,
-    dispatchLaunchBoat: 'Mentors Launch 04',
-    adminNotes: 'Launch boat en route to anchorage. ETA alongside 15:10.',
-    lastUpdated: '4 hours ago'
-  }
-];
+// Production-ready data store initialized with empty real state (no hardcoded test data)
+const INITIAL_QUOTES: AdminQuoteRequest[] = [];
+const INITIAL_INQUIRIES: AdminContactInquiry[] = [];
 
-const INITIAL_INQUIRIES: AdminContactInquiry[] = [
-  {
-    id: 'INQ-4821',
-    submittedAt: '2026-05-12T14:10:00Z',
-    fullName: 'Sven Borg',
-    company: 'Stolt-Nielsen Fleet Operations',
-    email: 's.borg@stolt.com',
-    phone: '+31 10 409 0100',
-    inquiryType: 'Fleet Supply Agreement',
-    message: 'We operate 14 chemical parcel tankers transiting Suez regularly every quarter. Looking to establish a comprehensive annual ship chandlery and provisions agreement with fixed rebates for Suez and Port Said calls.',
-    status: 'New',
-    assignedTo: 'Commercial Director Ahmed',
-    adminNotes: 'High-value fleet account. Prepare corporate proposal and Suez transit discount tier.',
-    lastUpdated: '25 mins ago'
-  },
-  {
-    id: 'INQ-4815',
-    submittedAt: '2026-05-12T09:45:00Z',
-    fullName: 'Elena Rostova',
-    company: 'V-Ships Monaco',
-    email: 'elena.rostova@vships.com',
-    phone: '+377 92 05 10 50',
-    inquiryType: 'Emergency Stores & Spares',
-    message: 'One of our bulk carriers arriving at Suez V-zone tomorrow morning requires urgent emergency auxiliary generator fuel filters (IMPA 23.20.15) and fresh potable water barge bunkering (120 MT). Can you supply alongside?',
-    status: 'Replied',
-    assignedTo: 'Capt. Tarek (Suez Desk)',
-    adminNotes: 'Phoned superintendent. Confirmed stock availability in Suez warehouse. Water barge reserved for 08:00.',
-    lastUpdated: '2 hours ago'
-  },
-  {
-    id: 'INQ-4798',
-    submittedAt: '2026-05-11T14:00:00Z',
-    fullName: 'David Chen',
-    company: 'Pacific Basin Shipping',
-    email: 'dchen@pacificbasin.com',
-    phone: '+852 2233 7000',
-    inquiryType: 'Crew Welfare & SIMs',
-    message: 'Looking for 25 high-speed 4G unlimited data SIM cards and crew calling scratchcards for 2 handysize vessels entering Suez north convoy next Tuesday. Please provide pricing and activation terms.',
-    status: 'Closed',
-    assignedTo: 'Chandlery Officer Karim',
-    adminNotes: 'Package delivered and tested onboard. Master signed delivery receipt.',
-    lastUpdated: '1 day ago'
+// Known mock IDs to purge from previous testing sessions
+const MOCK_QUOTE_IDS = new Set(['MMP-RFQ-98421', 'MMP-RFQ-98405', 'MMP-RFQ-98388', 'MMP-RFQ-98310']);
+const MOCK_INQUIRY_IDS = new Set(['INQ-4821', 'INQ-4815', 'INQ-4798', 'MM-INQ-1042', 'MM-INQ-1039']);
+
+// Purge any lingering legacy mock data from localStorage
+function sanitizeLocalStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    const rawQuotes = localStorage.getItem(QUOTES_KEY);
+    if (rawQuotes) {
+      const parsed: AdminQuoteRequest[] = JSON.parse(rawQuotes);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(
+          (q) => !MOCK_QUOTE_IDS.has(q.id) && q.vesselName !== 'MSC ORION' && q.vesselName !== 'CMA CGM LOUVRE'
+        );
+        localStorage.setItem(QUOTES_KEY, JSON.stringify(cleaned));
+      }
+    }
+
+    const rawInq = localStorage.getItem(INQUIRIES_KEY);
+    if (rawInq) {
+      const parsedInq: AdminContactInquiry[] = JSON.parse(rawInq);
+      if (Array.isArray(parsedInq)) {
+        const cleanedInq = parsedInq.filter(
+          (i) => !MOCK_INQUIRY_IDS.has(i.id) && i.fullName !== 'Sven Borg' && i.fullName !== 'Elena Rostova'
+        );
+        localStorage.setItem(INQUIRIES_KEY, JSON.stringify(cleanedInq));
+      }
+    }
+  } catch (err) {
+    console.warn('Storage sanitization check:', err);
   }
-];
+}
+
+if (typeof window !== 'undefined') {
+  sanitizeLocalStorage();
+}
 
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
@@ -291,12 +161,13 @@ export const requestStore = {
     try {
       const data = localStorage.getItem(QUOTES_KEY);
       if (!data) {
-        localStorage.setItem(QUOTES_KEY, JSON.stringify(INITIAL_QUOTES));
-        return INITIAL_QUOTES;
+        return [];
       }
-      return JSON.parse(data);
+      const parsed: AdminQuoteRequest[] = JSON.parse(data);
+      // Filter out any mock remnants
+      return parsed.filter((q) => !MOCK_QUOTE_IDS.has(q.id) && q.vesselName !== 'MSC ORION');
     } catch {
-      return INITIAL_QUOTES;
+      return [];
     }
   },
 
@@ -488,13 +359,79 @@ export const requestStore = {
     try {
       const data = localStorage.getItem(INQUIRIES_KEY);
       if (!data) {
-        localStorage.setItem(INQUIRIES_KEY, JSON.stringify(INITIAL_INQUIRIES));
-        return INITIAL_INQUIRIES;
+        return [];
       }
-      return JSON.parse(data);
+      const parsed: AdminContactInquiry[] = JSON.parse(data);
+      return parsed.filter((i) => !MOCK_INQUIRY_IDS.has(i.id) && i.fullName !== 'Sven Borg');
     } catch {
-      return INITIAL_INQUIRIES;
+      return [];
     }
+  },
+
+  deleteContactInquiry(id: string): void {
+    const current = this.getContactInquiries();
+    const filtered = current.filter((i) => i.id !== id);
+    try {
+      localStorage.setItem(INQUIRIES_KEY, JSON.stringify(filtered));
+    } catch (e) {
+      console.warn('LocalStorage save error:', e);
+    }
+    notifyListeners();
+
+    try {
+      fetch(`/api/inquiries/${id}`, { method: 'DELETE' }).catch(() => {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.from('contact_inquiries').delete().eq('id', id).then();
+        }
+      });
+    } catch {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.from('contact_inquiries').delete().eq('id', id).then();
+      }
+    }
+  },
+
+  exportQuotesToCSV(): void {
+    const quotes = this.getQuoteRequests();
+    if (quotes.length === 0) {
+      alert('No quote records to export.');
+      return;
+    }
+
+    const headers = ['RFQ ID', 'Submitted At', 'Vessel Name', 'IMO Number', 'Port of Call', 'ETA Date', 'Services', 'Contact Name', 'Company', 'Email', 'Phone', 'Status', 'Quoted USD', 'Assigned Officer'];
+    const rows = quotes.map((q) => [
+      `"${q.id}"`,
+      `"${q.submittedAt}"`,
+      `"${q.vesselName.replace(/"/g, '""')}"`,
+      `"${q.imoNumber}"`,
+      `"${(q.portOfCall || '').replace(/"/g, '""')}"`,
+      `"${q.etaDate}"`,
+      `"${(q.services || []).join(', ').replace(/"/g, '""')}"`,
+      `"${(q.contactName || '').replace(/"/g, '""')}"`,
+      `"${(q.companyName || '').replace(/"/g, '""')}"`,
+      `"${(q.contactEmail || '').replace(/"/g, '""')}"`,
+      `"${(q.contactPhone || '').replace(/"/g, '""')}"`,
+      `"${q.status}"`,
+      `"${q.quotedAmountUSD || ''}"`,
+      `"${(q.assignedOfficer || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Mentors_Marine_RFQs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  clearAllData(): void {
+    localStorage.removeItem(QUOTES_KEY);
+    localStorage.removeItem(INQUIRIES_KEY);
+    notifyListeners();
   },
 
   addContactInquiry(message: ContactMessage): AdminContactInquiry {
@@ -571,8 +508,8 @@ export const requestStore = {
   },
 
   resetToDefaults(): void {
-    localStorage.setItem(QUOTES_KEY, JSON.stringify(INITIAL_QUOTES));
-    localStorage.setItem(INQUIRIES_KEY, JSON.stringify(INITIAL_INQUIRIES));
+    localStorage.setItem(QUOTES_KEY, JSON.stringify([]));
+    localStorage.setItem(INQUIRIES_KEY, JSON.stringify([]));
     notifyListeners();
   },
 

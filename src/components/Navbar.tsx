@@ -96,22 +96,22 @@ export const Navbar: React.FC<NavbarProps> = () => {
       ref={navRef}
     >
       {/* SINGLE FULL-WIDTH NAVBAR CONTAINER */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex items-center justify-between h-20 gap-4">
+      <div className="w-full px-3 sm:px-6 lg:px-8 xl:px-12">
+        <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20 gap-2 sm:gap-4">
           {/* BRAND LOGO & TITLE */}
           <Link
             to="/"
-            className="flex items-center gap-3.5 group shrink-0"
+            className="flex items-center gap-2.5 sm:gap-3.5 group shrink-0"
             id="brand-logo-link"
           >
-            <div className="w-11 h-11 rounded-xl bg-[#0B2545] flex items-center justify-center text-white shadow-xs border border-slate-700/50 group-hover:border-amber-400/80 transition-all shrink-0">
-              <Anchor className="w-6 h-6 text-amber-400 stroke-[2.2]" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-xl bg-[#0B2545] flex items-center justify-center text-white shadow-xs border border-slate-700/50 group-hover:border-amber-400/80 transition-all shrink-0">
+              <Anchor className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-6 lg:h-6 text-amber-400 stroke-[2.2]" />
             </div>
             <div className="flex flex-col justify-center">
-              <span className="font-extrabold text-lg sm:text-xl xl:text-2xl tracking-wide text-[#0B2545] font-cinzel leading-none whitespace-nowrap">
+              <span className="font-extrabold text-base sm:text-lg lg:text-xl xl:text-2xl tracking-wide text-[#0B2545] font-cinzel leading-none whitespace-nowrap">
                 {isRTL ? 'MENTORS MARINE' : 'MENTORS MARINE'}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#C81D25] uppercase leading-tight mt-1 whitespace-nowrap">
+              <span className="text-[8px] sm:text-[9.5px] lg:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] text-[#C81D25] uppercase leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">
                 {isRTL ? 'تموين وتوريدات السفن البحرية' : 'SHIP CHANDLERS & PROVISIONS'}
               </span>
             </div>
@@ -447,25 +447,25 @@ export const Navbar: React.FC<NavbarProps> = () => {
           </div>
 
           {/* MOBILE CONTROLS: LANGUAGE & MENU BUTTON */}
-          <div className="flex items-center gap-2.5 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
               onClick={() => handleLanguageChange(currentLang === 'en' ? 'ar' : 'en')}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 flex items-center gap-1.5"
+              className="min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 flex items-center gap-1.5 active:bg-slate-200 transition-colors"
               aria-label="Toggle language"
             >
-              <Globe className="w-3.5 h-3.5 text-sky-600" />
+              <Globe className="w-4 h-4 text-sky-600 shrink-0" />
               <span>{currentLang === 'en' ? 'عربي' : 'EN'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl text-slate-800 hover:bg-slate-100 focus:outline-none border border-slate-200/70"
+              className="min-h-[40px] min-w-[40px] p-2 rounded-xl text-slate-800 hover:bg-slate-100 active:bg-slate-200 focus:outline-none border border-slate-200/80 flex items-center justify-center transition-colors"
               aria-label="Toggle navigation menu"
               id="mobile-menu-toggle"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6 text-[#0B2545]" />}
+              {mobileMenuOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-[#0B2545]" />}
             </button>
           </div>
         </div>
@@ -473,62 +473,139 @@ export const Navbar: React.FC<NavbarProps> = () => {
 
       {/* MOBILE RESPONSIVE DRAWER */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-top-1">
-          {/* Quick Action Buttons */}
-          <div className="grid grid-cols-2 gap-2">
-            <Link
-              to="/get-a-quote"
-              className="bg-[#C81D25] text-white text-center py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-1.5"
-            >
-              <Clock className="w-3.5 h-3.5 text-amber-300" />
-              <span>{languageStore.t('nav_quote_instant')}</span>
-            </Link>
-            <Link
-              to="/contact"
-              className="bg-[#0B2545] text-white text-center py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-1.5"
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-sky-400" />
-              <span>{languageStore.t('nav_contact')}</span>
-            </Link>
-          </div>
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 top-16 sm:top-18 bg-black/40 backdrop-blur-xs z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
 
-          <div className="divide-y divide-slate-100 text-sm font-semibold">
-            <Link to="/" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_home')}
-            </Link>
-
-            <Link to="/services" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_services')}
-            </Link>
-
-            <Link to="/ports" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_ports')}
-            </Link>
-
-            <Link to="/why-us" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_why_us')}
-            </Link>
-
-            <Link to="/about" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_about')}
-            </Link>
-
-            <Link to="/contact" className="block py-2.5 text-slate-800 hover:text-[#0B2545]">
-              {languageStore.t('nav_contact')}
-            </Link>
-
-            <Link to="/client-portal" className="flex items-center gap-2 py-2.5 text-[#0B2545]">
-              <User className="w-4 h-4 text-sky-600" />
-              <span>{languageStore.t('nav_portal')}</span>
-            </Link>
-
-            {currentUser?.role === 'admin' && (
-              <Link to="/admin" className="block py-2.5 text-amber-700 font-bold">
-                {isRTL ? 'مكتب العمليات والموظفين' : 'Operations Admin Desk (Staff)'}
+          <div className="relative z-50 lg:hidden bg-white border-t border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-2xl max-h-[calc(100dvh-4.5rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+            {/* Quick Action Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                to="/get-a-quote"
+                onClick={() => setMobileMenuOpen(false)}
+                className="bg-[#C81D25] hover:bg-[#a8161d] text-white text-center py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>{languageStore.t('nav_quote_instant')}</span>
               </Link>
-            )}
+              <Link
+                to="/contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className="bg-[#0B2545] hover:bg-[#13315C] text-white text-center py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+              >
+                <PhoneCall className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <span>{languageStore.t('nav_contact')}</span>
+              </Link>
+            </div>
+
+            <div className="divide-y divide-slate-100 text-sm font-semibold">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/') && location.pathname === '/' ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_home')}
+              </Link>
+
+              <Link
+                to="/services"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/services') ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_services')}
+              </Link>
+
+              <Link
+                to="/ports"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/ports') ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_ports')}
+              </Link>
+
+              <Link
+                to="/why-us"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/why-us') ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_why_us')}
+              </Link>
+
+              <Link
+                to="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/about') ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_about')}
+              </Link>
+
+              <Link
+                to="/contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-3 px-2 rounded-lg transition-colors ${
+                  isCurrent('/contact') ? 'text-[#0B2545] bg-slate-50 font-bold' : 'text-slate-800 hover:text-[#0B2545]'
+                }`}
+              >
+                {languageStore.t('nav_contact')}
+              </Link>
+
+              <Link
+                to="/client-portal"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 py-3 px-2 rounded-lg text-[#0B2545] hover:bg-slate-50 transition-colors"
+              >
+                <User className="w-4 h-4 text-sky-600 shrink-0" />
+                <span>{currentUser ? currentUser.name : languageStore.t('nav_portal')}</span>
+              </Link>
+
+              {currentUser?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between py-3 px-2 rounded-lg text-amber-800 bg-amber-50/70 font-bold transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>{isRTL ? 'مكتب العمليات والموظفين' : 'Operations Admin Desk (Staff)'}</span>
+                  </div>
+                  {unreadCount.total > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount.total}
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              {currentUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    authStore.logout();
+                    setMobileMenuOpen(false);
+                    navigate('/');
+                  }}
+                  className="w-full text-left rtl:text-right py-3 px-2 rounded-lg text-red-600 hover:bg-red-50 font-bold flex items-center gap-2 transition-colors"
+                >
+                  <LogOut className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{languageStore.t('nav_sign_out')}</span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );
