@@ -1,5 +1,5 @@
 import { AppUser, UserRole } from '../types';
-import { getSupabaseClient } from './supabaseClient';
+import { getSupabaseClient, getAuthRedirectUrl } from './supabaseClient';
 
 const CURRENT_USER_KEY = 'mentors_marine_active_user_v1';
 const REGISTERED_USERS_KEY = 'mentors_marine_users_db_v1';
@@ -72,7 +72,11 @@ function saveLocalRegisteredUser(user: StoredUserRecord) {
 }
 
 type AuthListener = (user: AppUser | null) => void;
+type RecoveryListener = (isRecovery: boolean) => void;
+
 const listeners: Set<AuthListener> = new Set();
+const recoveryListeners: Set<RecoveryListener> = new Set();
+let isPasswordRecoveryActive = false;
 
 function notifyAuthListeners(user: AppUser | null) {
   listeners.forEach((listener) => {
@@ -82,6 +86,76 @@ function notifyAuthListeners(user: AppUser | null) {
       console.error('Error in auth listener:', err);
     }
   });
+}
+
+function notifyRecoveryListeners(status: boolean) {
+  isPasswordRecoveryActive = status;
+  recoveryListeners.forEach((l) => {
+    try {
+      l(status);
+    } catch (err) {
+      console.error('Error in recovery listener:', err);
+    }
+  });
+}
+
+// Global Supabase Auth listener initializer
+let isSupabaseListenerInitialized = false;
+function ensureSupabaseAuthListener() {
+  if (isSupabaseListenerInitialized || typeof window === 'undefined') return;
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+
+  isSupabaseListenerInitialized = true;
+
+  // Check URL hash for type=recovery or type=signup
+  if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+    notifyRecoveryListeners(true);
+  }
+
+  try {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        notifyRecoveryListeners(true);
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        // User confirmed email or signed in via magic link
+        const meta = session.user.user_metadata || {};
+        const name = meta.name || session.user.email?.split('@')[0] || 'Vessel Officer';
+        const initials = name
+          .split(' ')
+          .filter(Boolean)
+          .map((p: string) => p[0])
+          .join('')
+          .toUpperCase()
+          .substring(0, 2) || 'MM';
+
+        const safeUser: AppUser = {
+          id: session.user.id,
+          name: name,
+          email: session.user.email || '',
+          company: meta.company || 'Maritime Client',
+          role: (meta.role as UserRole) || 'client',
+          phone: meta.phone || '',
+          avatarInitials: initials,
+          createdAt: session.user.created_at || new Date().toISOString()
+        };
+
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+        notifyAuthListeners(safeUser);
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem(CURRENT_USER_KEY);
+        notifyAuthListeners(null);
+        notifyRecoveryListeners(false);
+      }
+    });
+  } catch (err) {
+    console.warn('Could not bind Supabase auth state change listener:', err);
+  }
+}
+
+// Auto-run on client
+if (typeof window !== 'undefined') {
+  ensureSupabaseAuthListener();
 }
 
 export const authStore = {
@@ -104,11 +178,78 @@ export const authStore = {
     return user !== null && user.role === 'admin';
   },
 
-  async login(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AppUser }> {
+  isPasswordRecoveryMode(): boolean {
+    return isPasswordRecoveryActive;
+  },
+
+  setPasswordRecoveryMode(status: boolean) {
+    notifyRecoveryListeners(status);
+  },
+
+  async login(
+    email: string,
+    password: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    user?: AppUser;
+    emailNotConfirmed?: boolean;
+    email?: string;
+  }> {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // 1. Try server API endpoint (works in full-stack Node/Express container)
+    // 1. Try Supabase Auth first if configured
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword
+        });
+
+        if (authError) {
+          const errMsg = authError.message.toLowerCase();
+          if (errMsg.includes('email not confirmed') || errMsg.includes('not verified')) {
+            return {
+              success: false,
+              error: 'Your email address has not been confirmed yet. Please check your inbox for the activation link.',
+              emailNotConfirmed: true,
+              email: cleanEmail
+            };
+          }
+        } else if (authData?.user) {
+          const meta = authData.user.user_metadata || {};
+          const name = meta.name || cleanEmail.split('@')[0] || 'Vessel Officer';
+          const initials = name
+            .split(' ')
+            .filter(Boolean)
+            .map((p: string) => p[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2) || 'MM';
+
+          const safeUser: AppUser = {
+            id: authData.user.id,
+            name: name,
+            email: authData.user.email || cleanEmail,
+            company: meta.company || 'Maritime Client',
+            role: (meta.role as UserRole) || 'client',
+            phone: meta.phone || '',
+            avatarInitials: initials,
+            createdAt: authData.user.created_at || new Date().toISOString()
+          };
+
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+          notifyAuthListeners(safeUser);
+          return { success: true, user: safeUser };
+        }
+      } catch (err: any) {
+        console.warn('Supabase signInWithPassword notice:', err?.message || err);
+      }
+    }
+
+    // 2. Try server API endpoint (Node/Express backend)
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -133,12 +274,11 @@ export const authStore = {
           return { success: false, error: data.error };
         }
       }
-    } catch (err) {
-      // Backend not running or static GitHub Pages hosting - proceed to client fallbacks
+    } catch {
+      // Backend not running / static GitHub Pages hosting
     }
 
-    // 2. Try direct Supabase client if configured on client side
-    const supabase = getSupabaseClient();
+    // 3. Try direct app_users table in Supabase
     if (supabase) {
       try {
         const { data: dbUser, error } = await supabase
@@ -167,11 +307,11 @@ export const authStore = {
           }
         }
       } catch (e) {
-        console.warn('Direct Supabase login error:', e);
+        console.warn('Direct Supabase table query error:', e);
       }
     }
 
-    // 3. Static Hosting / Local Demo Mode fallback (works out of the box on GitHub Pages)
+    // 4. Static Hosting / Local Demo Mode fallback (works out of the box on GitHub Pages)
     const allFallbackUsers = [...DEFAULT_FALLBACK_USERS, ...getLocalRegisteredUsers()];
     const matched = allFallbackUsers.find((u) => u.email.toLowerCase() === cleanEmail);
 
@@ -209,15 +349,22 @@ export const authStore = {
     company: string;
     role?: UserRole;
     phone?: string;
-  }): Promise<{ success: boolean; error?: string; user?: AppUser }> {
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    user?: AppUser;
+    needsEmailConfirmation?: boolean;
+    email?: string;
+  }> {
     const cleanEmail = data.email.trim().toLowerCase();
-    const initials = data.name
-      .split(' ')
-      .filter(Boolean)
-      .map((p) => p[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2) || 'MM';
+    const initials =
+      data.name
+        .split(' ')
+        .filter(Boolean)
+        .map((p) => p[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2) || 'MM';
 
     const newUserRecord: StoredUserRecord = {
       id: `USR-${Date.now()}`,
@@ -231,10 +378,104 @@ export const authStore = {
       createdAt: new Date().toISOString()
     };
 
-    // Always save to local store so static GitHub Pages retains registered user
+    // Save locally for reliable demo and offline fallbacks
     saveLocalRegisteredUser(newUserRecord);
 
-    // 1. Try server API
+    // 1. Try Supabase Auth signUp with email confirmation
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const redirectUrl = getAuthRedirectUrl('/#/client-portal');
+        const { data: authResult, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: data.password.trim(),
+          options: {
+            data: {
+              name: data.name.trim(),
+              company: data.company.trim(),
+              phone: data.phone?.trim() || '',
+              role: 'client'
+            },
+            emailRedirectTo: redirectUrl
+          }
+        });
+
+        if (authError) {
+          // If already registered
+          if (authError.message.toLowerCase().includes('already registered')) {
+            return {
+              success: false,
+              error: 'An account with this email address already exists. Please login or reset your password.'
+            };
+          }
+          return { success: false, error: authError.message };
+        }
+
+        // Check if email confirmation is required by Supabase project settings
+        const isEmailConfirmationPending =
+          authResult.user &&
+          !authResult.session &&
+          (!authResult.user.confirmed_at ||
+            (authResult.user.identities && authResult.user.identities.length > 0));
+
+        // Sync to app_users table as well
+        try {
+          await supabase.from('app_users').insert([
+            {
+              id: authResult.user?.id || newUserRecord.id,
+              name: newUserRecord.name,
+              email: newUserRecord.email,
+              company: newUserRecord.company,
+              role: 'client',
+              phone: newUserRecord.phone,
+              avatar_initials: newUserRecord.avatarInitials,
+              password_hash: newUserRecord.passwordHash
+            }
+          ]);
+        } catch {
+          // app_users insert may be restricted or optional
+        }
+
+        if (isEmailConfirmationPending) {
+          return {
+            success: true,
+            needsEmailConfirmation: true,
+            email: cleanEmail,
+            user: {
+              id: authResult.user?.id || newUserRecord.id,
+              name: newUserRecord.name,
+              email: cleanEmail,
+              company: newUserRecord.company,
+              role: 'client',
+              phone: newUserRecord.phone,
+              avatarInitials: initials,
+              createdAt: newUserRecord.createdAt
+            }
+          };
+        }
+
+        // If auto-confirmed or confirmations disabled
+        if (authResult.session) {
+          const safeUser: AppUser = {
+            id: authResult.user?.id || newUserRecord.id,
+            name: newUserRecord.name,
+            email: cleanEmail,
+            company: newUserRecord.company,
+            role: 'client',
+            phone: newUserRecord.phone,
+            avatarInitials: initials,
+            createdAt: newUserRecord.createdAt
+          };
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
+          notifyAuthListeners(safeUser);
+          return { success: true, needsEmailConfirmation: false, user: safeUser };
+        }
+      } catch (err: any) {
+        console.warn('Supabase signUp error:', err?.message || err);
+      }
+    }
+
+    // 2. Try server API backend
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -277,26 +518,7 @@ export const authStore = {
       // Backend not running / static GitHub Pages hosting
     }
 
-    // 2. Try direct Supabase if configured on client
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('app_users').insert([{
-          id: newUserRecord.id,
-          name: newUserRecord.name,
-          email: newUserRecord.email,
-          company: newUserRecord.company,
-          role: 'client',
-          phone: newUserRecord.phone,
-          avatar_initials: newUserRecord.avatarInitials,
-          password_hash: newUserRecord.passwordHash
-        }]);
-      } catch (err) {
-        console.warn('Supabase direct insert warning:', err);
-      }
-    }
-
-    // Fallback: log user in immediately with created record
+    // 3. Fallback: log user in with created record
     const safeUser: AppUser = {
       id: newUserRecord.id,
       name: newUserRecord.name,
@@ -310,12 +532,153 @@ export const authStore = {
 
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
     notifyAuthListeners(safeUser);
-    return { success: true, user: safeUser };
+    return { success: true, needsEmailConfirmation: false, user: safeUser };
+  },
+
+  /**
+   * Resends the signup confirmation email to the user via Supabase
+   */
+  async resendConfirmationEmail(
+    email: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return {
+        success: true,
+        message: 'A verification link has been resent to your email address (Demo mode).'
+      };
+    }
+
+    try {
+      const redirectUrl = getAuthRedirectUrl('/#/client-portal');
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: cleanEmail,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        message: 'Confirmation email successfully resent. Please check your inbox and spam folder.'
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Failed to resend confirmation email.'
+      };
+    }
+  },
+
+  /**
+   * Dispatches a Password Reset link via email using Supabase
+   */
+  async sendPasswordResetEmail(
+    email: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return {
+        success: true,
+        message: `Password reset instructions have been dispatched to ${cleanEmail}.`
+      };
+    }
+
+    try {
+      const redirectUrl = getAuthRedirectUrl('/#/reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: redirectUrl
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        message: `Password reset link sent to ${cleanEmail}. Please check your email inbox to choose a new password.`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Failed to send password reset email.'
+      };
+    }
+  },
+
+  /**
+   * Updates the user's password once they arrive via recovery link
+   */
+  async updatePassword(
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const cleanPassword = newPassword.trim();
+    if (cleanPassword.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          password: cleanPassword
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        // Also update local copy and app_users table if user session exists
+        if (data?.user?.email) {
+          try {
+            await supabase
+              .from('app_users')
+              .update({ password_hash: cleanPassword, updated_at: new Date().toISOString() })
+              .eq('email', data.user.email);
+          } catch {
+            // Optional table update
+          }
+        }
+
+        notifyRecoveryListeners(false);
+        return {
+          success: true,
+          message: 'Your password has been updated securely. You can now access your vessel account.'
+        };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'Failed to update password.' };
+      }
+    }
+
+    // Offline / Demo fallback
+    notifyRecoveryListeners(false);
+    return {
+      success: true,
+      message: 'Password updated successfully (Demo mode).'
+    };
   },
 
   logout(): void {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        supabase.auth.signOut();
+      } catch (e) {
+        console.warn('Supabase signOut error:', e);
+      }
+    }
     localStorage.removeItem(CURRENT_USER_KEY);
     notifyAuthListeners(null);
+    notifyRecoveryListeners(false);
   },
 
   loginAsDemoClient(): AppUser {
@@ -330,5 +693,13 @@ export const authStore = {
     return () => {
       listeners.delete(listener);
     };
+  },
+
+  subscribeRecovery(listener: RecoveryListener): () => void {
+    recoveryListeners.add(listener);
+    return () => {
+      recoveryListeners.delete(listener);
+    };
   }
 };
+

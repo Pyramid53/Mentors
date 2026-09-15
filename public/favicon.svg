@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0B2545"/>
+  <circle cx="32" cy="32" r="28" stroke="#13315C" stroke-width="2"/>
+  <!-- Golden Anchor & Suez Star -->
+  <path d="M32 12V46M32 12C34.2091 12 36 10.2091 36 8C36 5.79086 34.2091 4 32 4C29.7909 4 28 5.79086 28 8C28 10.2091 29.7909 12 32 12ZM20 22H44M16 34C16 42.8366 23.1634 50 32 50C40.8366 50 48 42.8366 48 34H44C44 40.6274 38.6274 46 32 46C25.3726 46 20 40.6274 20 34H16Z" stroke="#EE964B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Compass Points -->
+  <circle cx="32" cy="22" r="2" fill="#FFFFFF"/>
+</svg>

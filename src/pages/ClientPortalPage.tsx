@@ -28,7 +28,11 @@ import {
   ChevronRight,
   Anchor,
   FileSpreadsheet,
-  Check
+  Check,
+  RefreshCw,
+  X,
+  ShieldCheck,
+  Send
 } from 'lucide-react';
 import { authStore } from '../services/authStore';
 import { requestStore } from '../services/requestStore';
@@ -60,6 +64,25 @@ export const ClientPortalPage: React.FC = () => {
   const [signupTitle, setSignupTitle] = useState('Fleet Procurement Superintendent');
   const [signupPassword, setSignupPassword] = useState('');
 
+  // Email Confirmation & Resend state
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
+
+  // Forgot Password Modal state
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotFeedback, setForgotFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Password Recovery Mode state (when arriving via reset link)
+  const [isRecoveryMode, setIsRecoveryMode] = useState<boolean>(authStore.isPasswordRecoveryMode());
+  const [newRecoveryPassword, setNewRecoveryPassword] = useState('');
+  const [confirmRecoveryPassword, setConfirmRecoveryPassword] = useState('');
+  const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryFeedback, setRecoveryFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   // Client requests
   const [clientQuotes, setClientQuotes] = useState<AdminQuoteRequest[]>([]);
   const [selectedQuoteForModal, setSelectedQuoteForModal] = useState<AdminQuoteRequest | null>(null);
@@ -71,9 +94,13 @@ export const ClientPortalPage: React.FC = () => {
     const unsubLang = languageStore.subscribe((lang) => {
       setCurrentLang(lang);
     });
+    const unsubRecovery = authStore.subscribeRecovery((isRec) => {
+      setIsRecoveryMode(isRec);
+    });
     return () => {
       unsubAuth();
       unsubLang();
+      unsubRecovery();
     };
   }, []);
 
@@ -137,14 +164,29 @@ export const ClientPortalPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setResendNotice(null);
     setIsSubmitting(true);
 
     const res = await authStore.login(loginEmail, loginPassword);
     setIsSubmitting(false);
 
     if (!res.success) {
-      setErrorMsg(isAr ? 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.' : (res.error || 'Login failed. Please verify credentials.'));
+      if (res.emailNotConfirmed) {
+        setUnconfirmedEmail(res.email || loginEmail);
+        setErrorMsg(
+          isAr
+            ? 'لم يتم تفعيل هذا الحساب عبر البريد الإلكتروني بعد. يرجى الضغط على رابط التفعيل المرسل إلى بريدك الإلكتروني لتأكيد الحساب.'
+            : 'This account has not been activated via email yet. Please check your inbox or click below to resend the confirmation link.'
+        );
+      } else {
+        setErrorMsg(
+          isAr
+            ? 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.'
+            : (res.error || 'Login failed. Please verify credentials.')
+        );
+      }
     } else {
+      setUnconfirmedEmail(null);
       setSuccessMsg(isAr ? `مرحباً بعودتك، ${res.user?.name}!` : `Welcome back, ${res.user?.name}!`);
       if (res.user?.role === 'admin') {
         setTimeout(() => navigate('/admin'), 600);
@@ -155,6 +197,7 @@ export const ClientPortalPage: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setResendNotice(null);
     setIsSubmitting(true);
 
     const res = await authStore.signup({
@@ -168,9 +211,122 @@ export const ClientPortalPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (!res.success) {
-      setErrorMsg(isAr ? 'فشل التسجيل. يرجى مراجعة البيانات والمحاولة مجدداً.' : (res.error || 'Registration failed.'));
+      setErrorMsg(
+        isAr
+          ? 'فشل التسجيل. يرجى مراجعة البيانات والمحاولة مجدداً.'
+          : (res.error || 'Registration failed.')
+      );
+    } else if (res.needsEmailConfirmation) {
+      setUnconfirmedEmail(res.email || signupEmail);
+      setSuccessMsg(
+        isAr
+          ? `تم إرسال رابط تأكيد وتفعيل الحساب إلى: ${res.email || signupEmail}. يرجى مراجعة صندوق الوارد والضغط على الرابط لتفعيل حسابك.`
+          : `Activation link sent to ${res.email || signupEmail}! Please check your email inbox and click the link to activate your vessel portal.`
+      );
     } else {
-      setSuccessMsg(isAr ? `تم إنشاء الحساب بنجاح للقبطان ${res.user?.name}!` : `Account created successfully for ${res.user?.name}!`);
+      setUnconfirmedEmail(null);
+      setSuccessMsg(
+        isAr
+          ? `تم إنشاء الحساب بنجاح للقبطان ${res.user?.name}!`
+          : `Account created successfully for ${res.user?.name}!`
+      );
+    }
+  };
+
+  const handleResendConfirmation = async (targetEmail: string) => {
+    if (!targetEmail) return;
+    setResendLoading(true);
+    setResendNotice(null);
+    const res = await authStore.resendConfirmationEmail(targetEmail);
+    setResendLoading(false);
+
+    if (res.success) {
+      setResendNotice(
+        isAr
+          ? 'تمت إعادة إرسال رابط تفعيل الحساب بنجاح! يرجى فحص صندوق الوارد ومجلد الرسائل غير المرغوب فيها (Spam).'
+          : (res.message || 'Verification link resent successfully! Check your inbox and spam folder.')
+      );
+    } else {
+      setErrorMsg(
+        isAr
+          ? 'فشل في إعادة إرسال الرابط. يرجى المحاولة لاحقاً.'
+          : (res.error || 'Failed to resend confirmation email.')
+      );
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    setForgotFeedback(null);
+
+    const res = await authStore.sendPasswordResetEmail(forgotEmail.trim());
+    setForgotLoading(false);
+
+    if (res.success) {
+      setForgotFeedback({
+        type: 'success',
+        message: isAr
+          ? `تم إرسال رابط إعادة تعيين كلمة المرور إلى ${forgotEmail}. يرجى مراجعة صندوق الوارد (Spam / Junk) لإتمام التعيين.`
+          : (res.message || `Password reset link sent to ${forgotEmail}. Please check your inbox.`)
+      });
+    } else {
+      setForgotFeedback({
+        type: 'error',
+        message: isAr
+          ? 'تعذر إرسال رابط الاستعادة. يرجى التأكد من كتابة البريد الإلكتروني بشكل صحيح والمحاولة مجدداً.'
+          : (res.error || 'Failed to dispatch reset email. Please verify address.')
+      });
+    }
+  };
+
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryFeedback(null);
+
+    if (newRecoveryPassword.length < 6) {
+      setRecoveryFeedback({
+        type: 'error',
+        message: isAr
+          ? 'يجب ألا تقل كلمة المرور عن 6 أحرف.'
+          : 'Password must be at least 6 characters.'
+      });
+      return;
+    }
+
+    if (newRecoveryPassword !== confirmRecoveryPassword) {
+      setRecoveryFeedback({
+        type: 'error',
+        message: isAr
+          ? 'كلمتا المرور غير متطابقتين.'
+          : 'Passwords do not match. Please verify and retype.'
+      });
+      return;
+    }
+
+    setRecoveryLoading(true);
+    const res = await authStore.updatePassword(newRecoveryPassword);
+    setRecoveryLoading(false);
+
+    if (res.success) {
+      setRecoveryFeedback({
+        type: 'success',
+        message: isAr
+          ? 'تم تحديث كلمة المرور بنجاح! تم تسجيل دخولك بأمان.'
+          : 'Password updated successfully! You are now logged in.'
+      });
+      setTimeout(() => {
+        setIsRecoveryMode(false);
+        authStore.setPasswordRecoveryMode(false);
+      }, 2000);
+    } else {
+      setRecoveryFeedback({
+        type: 'error',
+        message: isAr
+          ? 'فشل تحديث كلمة المرور. قد تكون صلاحية الرابط قد انتهت.'
+          : (res.error || 'Failed to update password.')
+      });
     }
   };
 
@@ -217,6 +373,166 @@ export const ClientPortalPage: React.FC = () => {
             >
               ✕
             </button>
+          </div>
+        )}
+
+        {/* Resend confirmation notification */}
+        {resendNotice && (
+          <div className="mb-6 p-4 rounded-xl bg-sky-50 border border-sky-300 text-sky-950 text-xs sm:text-sm flex items-center justify-between shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-sky-600 shrink-0" />
+              <span className="font-medium">{resendNotice}</span>
+            </div>
+            <button
+              onClick={() => setResendNotice(null)}
+              className="text-sky-700 hover:text-sky-900 font-bold mx-2 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Unconfirmed Email Activation Prompt & Resend Button */}
+        {unconfirmedEmail && (
+          <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-amber-950 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Mail className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-sm text-[#0B2545]">
+                    {isAr ? 'تأكيد الحساب عبر البريد الإلكتروني مطلوب' : 'Email Confirmation Required'}
+                  </h4>
+                  <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+                    {isAr
+                      ? `تم إرسال رابط التفعيل إلى: `
+                      : `A verification link has been dispatched to: `}
+                    <strong className="font-mono text-[#0B2545] underline">{unconfirmedEmail}</strong>.
+                    {isAr
+                      ? ' يرجى فتح صندوق الوارد (أو البريد المزعج Spam) والضغط على الرابط لتفعيل الحساب.'
+                      : ' Please click the link to confirm and activate your vessel procurement account.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleResendConfirmation(unconfirmedEmail)}
+                disabled={resendLoading}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0B2545] hover:bg-[#13315C] text-amber-300 rounded-xl text-xs font-bold transition-all shadow-sm shrink-0 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${resendLoading ? 'animate-spin text-amber-400' : ''}`} />
+                <span>
+                  {resendLoading
+                    ? (isAr ? 'جارٍ إعادة الإرسال...' : 'Resending Link...')
+                    : (isAr ? 'إعادة إرسال رابط التفعيل' : 'Resend Activation Link')}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PASSWORD RECOVERY INLINE BOX (When returning via email link) */}
+        {isRecoveryMode && (
+          <div className="mb-8 p-6 sm:p-8 rounded-2xl bg-[#0B2545] text-white border-2 border-amber-400 shadow-xl animate-in zoom-in-95">
+            <div className="max-w-md mx-auto text-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center mx-auto mb-3">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold font-cinzel text-white">
+                {isAr ? 'تعيين كلمة مرور جديدة' : 'Reset Your Password'}
+              </h3>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAr
+                  ? 'تم التحقق من رابط الاستعادة. يرجى إدخال كلمة مرور جديدة لحسابك.'
+                  : 'Recovery link verified. Enter a new password for your vessel portal account.'}
+              </p>
+            </div>
+
+            {recoveryFeedback && (
+              <div
+                className={`max-w-md mx-auto mb-4 p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  recoveryFeedback.type === 'success'
+                    ? 'bg-emerald-500/20 border border-emerald-400 text-emerald-200'
+                    : 'bg-red-500/20 border border-red-400 text-red-200'
+                }`}
+              >
+                {recoveryFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{recoveryFeedback.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRecoverySubmit} className="max-w-md mx-auto space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-1">
+                  {isAr ? 'كلمة المرور الجديدة' : 'New Password'}
+                </label>
+                <div className="relative">
+                  <Lock className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3' : 'left-3'} top-3`} />
+                  <input
+                    type={showRecoveryPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newRecoveryPassword}
+                    onChange={(e) => setNewRecoveryPassword(e.target.value)}
+                    placeholder={isAr ? '6 أحرف على الأقل' : 'At least 6 characters'}
+                    className={`w-full ${isAr ? 'pr-9 pl-9 text-right' : 'pl-9 pr-9'} py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRecoveryPassword(!showRecoveryPassword)}
+                    className={`absolute ${isAr ? 'left-3' : 'right-3'} top-3 text-slate-400 hover:text-slate-200`}
+                  >
+                    {showRecoveryPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-1">
+                  {isAr ? 'تأكيد كلمة المرور' : 'Confirm Password'}
+                </label>
+                <div className="relative">
+                  <ShieldCheck className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3' : 'left-3'} top-3`} />
+                  <input
+                    type={showRecoveryPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmRecoveryPassword}
+                    onChange={(e) => setConfirmRecoveryPassword(e.target.value)}
+                    placeholder={isAr ? 'أعد إدخال كلمة المرور' : 'Confirm password'}
+                    className={`w-full ${isAr ? 'pr-9 pl-9 text-right' : 'pl-9 pr-9'} py-2.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={recoveryLoading}
+                  className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>
+                    {recoveryLoading
+                      ? (isAr ? 'جارٍ الحفظ...' : 'Saving...')
+                      : (isAr ? 'حفظ كلمة المرور الجديدة' : 'Update Password')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRecoveryMode(false);
+                    authStore.setPasswordRecoveryMode(false);
+                  }}
+                  className="px-3 py-2.5 text-xs text-slate-400 hover:text-white"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
@@ -576,13 +892,11 @@ export const ClientPortalPage: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() =>
-                          alert(
-                            isAr
-                              ? 'تم إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني المسجل.'
-                              : 'Password reset link sent to registered vessel superintendent email address.'
-                          )
-                        }
+                        onClick={() => {
+                          setShowForgotPasswordModal(true);
+                          setForgotEmail(loginEmail || '');
+                          setForgotFeedback(null);
+                        }}
                         className="text-sky-700 hover:text-sky-900 font-semibold"
                       >
                         {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
@@ -927,6 +1241,101 @@ export const ClientPortalPage: React.FC = () => {
                 >
                   {isAr ? 'إعادة تكرار الطلب' : 'Reorder Requisition'}
                 </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FORGOT PASSWORD MODAL */}
+        {showForgotPasswordModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-in zoom-in-95">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPasswordModal(false);
+                  setForgotFeedback(null);
+                }}
+                className={`absolute ${isAr ? 'left-5' : 'right-5'} top-5 text-slate-400 hover:text-slate-600 p-1`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 text-[#0B2545] flex items-center justify-center mx-auto mb-3 border border-sky-100 shadow-sm">
+                  <KeyRound className="w-6 h-6 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-bold font-cinzel text-[#0B2545]">
+                  {isAr ? 'استعادة كلمة المرور' : 'Reset Vessel Portal Password'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  {isAr
+                    ? 'أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً مشفراً لإعادة تعيين كلمة المرور فوراً.'
+                    : 'Enter your registered email address and we will dispatch an encrypted reset link immediately.'}
+                </p>
+              </div>
+
+              {forgotFeedback && (
+                <div
+                  className={`mb-4 p-3.5 rounded-xl text-xs flex items-start gap-2 ${
+                    forgotFeedback.type === 'success'
+                      ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+                      : 'bg-red-50 border border-red-300 text-red-900'
+                  }`}
+                >
+                  {forgotFeedback.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  )}
+                  <span className="leading-relaxed">{forgotFeedback.message}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    {isAr ? 'البريد الإلكتروني' : 'Registered Email'} <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className={`w-4 h-4 text-slate-400 absolute ${isAr ? 'right-3.5' : 'left-3.5'} top-3`} />
+                    <input
+                      type="email"
+                      required
+                      dir="ltr"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="superintendent@shipping.com"
+                      className={`w-full ${isAr ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3'} py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2545] text-slate-900`}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full bg-[#0B2545] hover:bg-[#13315C] text-amber-400 font-bold text-xs sm:text-sm py-3 rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  <Send className={`w-4 h-4 ${forgotLoading ? 'animate-pulse' : ''}`} />
+                  <span>
+                    {forgotLoading
+                      ? (isAr ? 'جارٍ إرسال الرابط...' : 'Dispatching Link...')
+                      : (isAr ? 'إرسال رابط استعادة كلمة المرور' : 'Send Recovery Link')}
+                  </span>
+                </button>
+              </form>
+
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPasswordModal(false);
+                    setForgotFeedback(null);
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium"
+                >
+                  {isAr ? 'العودة لتسجيل الدخول' : 'Back to Login'}
+                </button>
               </div>
             </div>
           </div>

@@ -11,6 +11,9 @@ import { ClientPortalPage } from './pages/ClientPortalPage';
 import { AboutPage } from './pages/AboutPage';
 import { PortsPage } from './pages/PortsPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { ForbiddenPage } from './pages/ForbiddenPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 // Scroll to top upon route change
 const ScrollToTop: React.FC = () => {
@@ -40,8 +43,12 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/ports" element={<PortsPage />} />
-            {/* Catch-all fallback */}
-            <Route path="*" element={<HomePage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/forbidden" element={<ForbiddenPage />} />
+            <Route path="/403" element={<ForbiddenPage />} />
+            <Route path="/404" element={<NotFoundPage />} />
+            {/* Catch-all fallback for undefined routes */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
         <Footer />

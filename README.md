@@ -7,18 +7,19 @@
 
 ## 🚀 Live Demo & Deployment
 
-This project is fully configured for continuous deployment to **GitHub Pages** using **GitHub Actions**.
+The production website is deployed live on **GitHub Pages**:  
+👉 **[https://pyramid53.github.io/Mentors/](https://pyramid53.github.io/Mentors/)**
 
-### 🌟 Hosting on GitHub Pages
+### 🌟 Automated Deployment via GitHub Actions
 
-1. **Push your code** to the `main` or `master` branch of your GitHub repository.
-2. Go to your repository on GitHub: **Settings → Pages**.
-3. Under **Build and deployment → Source**, select **GitHub Actions**.
-4. The workflow in `.github/workflows/deploy.yml` will automatically trigger, build the static application, and publish it live!
-5. Your live URL will be:  
-   `https://<your-username>.github.io/<your-repository-name>/`
-
-> **Note:** The application uses `HashRouter` and a custom SPA `404.html` redirect, ensuring that all routes (`/#/client-portal`, `/#/admin`, `/#/get-a-quote`, etc.) work with 100% reliability upon direct visits and browser refreshes on GitHub Pages.
+1. Pushing commits to `main` or `master` triggers `.github/workflows/main.yml`.
+2. The workflow installs packages on Node 22, executes `npm run build:pages`, and deploys `./dist` to GitHub Pages.
+3. Configured with:
+   - **Canonical Domain & SEO**: Configured for `https://pyramid53.github.io/Mentors/` with Schema.org JSON-LD business metadata.
+   - **`sitemap.xml`**: Automatic search engine mapping for all Suez supply routes and services.
+   - **`robots.txt`**: Crawl optimization; public catalog enabled while restricting internal dispatch console indexing.
+   - **SPA Route Handling (`public/404.html`)**: Automatically reroutes direct URLs (e.g., `/Mentors/services`) into client hash routes (`/Mentors/#/services`).
+   - **In-App 404 & 403 Pages**: Dedicated nautical-themed Vessel Off-Course (`404`) and Suez Security Clearance Required (`403`) error handlers with full Arabic and English support.
 
 ---
 

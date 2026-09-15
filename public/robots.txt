@@ -1,0 +1,19 @@
+# Mentors Marine Provisions - Suez Canal Ship Chandler & Logistics
+# Domain: https://pyramid53.github.io/Mentors/
+
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /#/*
+
+# Disallow indexing of private operations dispatch & clearance desks
+Disallow: /admin
+Disallow: /#/admin
+Disallow: /forbidden
+Disallow: /#/forbidden
+Disallow: /403
+Disallow: /#/403
+
+# Host & Sitemap reference
+Host: https://pyramid53.github.io/Mentors/
+Sitemap: https://pyramid53.github.io/Mentors/sitemap.xml

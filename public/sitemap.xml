@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <!-- Homepage -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.00</priority>
+  </url>
+  <!-- 60-Minute Fast Quotation & RFQ Engine -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/get-a-quote</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <!-- Marine Services & Provisioning Catalogue -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/services</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <!-- Egyptian Ports & Suez Canal Convoy Anchorages -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/ports</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <!-- Why Choose Mentors Marine (Suez Advantage) -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/why-us</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <!-- Company Profile & Credentials -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/about</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <!-- 24/7 Dispatch Desk & Port Operations Contact -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/contact</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <!-- Vessel Superintendent & Master Client Portal -->
+  <url>
+    <loc>https://pyramid53.github.io/Mentors/#/client-portal</loc>
+    <lastmod>2026-09-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+</urlset>
