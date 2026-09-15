@@ -96,33 +96,33 @@ export const Navbar: React.FC<NavbarProps> = () => {
       ref={navRef}
     >
       {/* SINGLE FULL-WIDTH NAVBAR CONTAINER */}
-      <div className="w-full px-3 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20 gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6">
+        <div className="flex items-center justify-between h-16 lg:h-17 gap-1 sm:gap-2 lg:gap-3">
           {/* BRAND LOGO & TITLE */}
           <Link
             to="/"
-            className="flex items-center gap-2.5 sm:gap-3.5 group shrink-0"
+            className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
             id="brand-logo-link"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-xl bg-[#0B2545] flex items-center justify-center text-white shadow-xs border border-slate-700/50 group-hover:border-amber-400/80 transition-all shrink-0">
-              <Anchor className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-6 lg:h-6 text-amber-400 stroke-[2.2]" />
+            <div className="w-8.5 h-8.5 sm:w-9 sm:h-9 lg:w-9.5 lg:h-9.5 rounded-lg bg-[#0B2545] flex items-center justify-center text-white shadow-xs border border-slate-700/50 group-hover:border-amber-400/80 transition-all shrink-0">
+              <Anchor className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-amber-400 stroke-[2.2]" />
             </div>
             <div className="flex flex-col justify-center">
-              <span className="font-extrabold text-base sm:text-lg lg:text-xl xl:text-2xl tracking-wide text-[#0B2545] font-cinzel leading-none whitespace-nowrap">
+              <span className="font-extrabold text-sm sm:text-base lg:text-base xl:text-lg tracking-wide text-[#0B2545] font-cinzel leading-none whitespace-nowrap">
                 {isRTL ? 'MENTORS MARINE' : 'MENTORS MARINE'}
               </span>
-              <span className="text-[8px] sm:text-[9.5px] lg:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] text-[#C81D25] uppercase leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">
+              <span className="text-[7.5px] sm:text-[8px] lg:text-[8.5px] xl:text-[9.5px] font-bold tracking-[0.08em] sm:tracking-[0.10em] text-[#C81D25] uppercase leading-tight mt-0.5 whitespace-nowrap">
                 {isRTL ? 'تموين وتوريدات السفن البحرية' : 'SHIP CHANDLERS & PROVISIONS'}
               </span>
             </div>
           </Link>
 
           {/* DESKTOP NAVIGATION LINKS - ALL GUARANTEED ON 1 LINE */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 shrink-0" id="desktop-nav">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 shrink-0" id="desktop-nav">
             {/* Home */}
             <Link
               to="/"
-              className={`px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                 isCurrent('/') && location.pathname === '/'
                   ? 'text-[#0B2545] bg-slate-100 font-bold'
                   : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -136,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <button
                 type="button"
                 onClick={() => setActiveDropdown(activeDropdown === 'services' ? null : 'services')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1 px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                   isCurrent('/services') || activeDropdown === 'services'
                     ? 'text-[#0B2545] bg-slate-100 font-bold'
                     : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -144,7 +144,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               >
                 <span className="whitespace-nowrap">{languageStore.t('nav_services')}</span>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${
                     activeDropdown === 'services' ? 'rotate-180 text-[#0B2545]' : ''
                   }`}
                 />
@@ -212,7 +212,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <button
                 type="button"
                 onClick={() => setActiveDropdown(activeDropdown === 'ports' ? null : 'ports')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1 px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                   isCurrent('/ports') || activeDropdown === 'ports'
                     ? 'text-[#0B2545] bg-slate-100 font-bold'
                     : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -220,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               >
                 <span className="whitespace-nowrap">{languageStore.t('nav_ports')}</span>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${
                     activeDropdown === 'ports' ? 'rotate-180 text-[#0B2545]' : ''
                   }`}
                 />
@@ -267,7 +267,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             {/* Why Us */}
             <Link
               to="/why-us"
-              className={`px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                 isCurrent('/why-us')
                   ? 'text-[#0B2545] bg-slate-100 font-bold'
                   : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -279,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             {/* About */}
             <Link
               to="/about"
-              className={`px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                 isCurrent('/about')
                   ? 'text-[#0B2545] bg-slate-100 font-bold'
                   : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -291,7 +291,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             {/* Contact */}
             <Link
               to="/contact"
-              className={`px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap ${
                 isCurrent('/contact')
                   ? 'text-[#0B2545] bg-slate-100 font-bold'
                   : 'text-slate-600 hover:text-[#0B2545] hover:bg-slate-50'
@@ -302,13 +302,13 @@ export const Navbar: React.FC<NavbarProps> = () => {
           </nav>
 
           {/* RIGHT ACTION BUTTONS: CLEAN, ELEGANT, STRICT 1-LINE CONTROLS */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2.5 shrink-0">
             {/* Language Switcher Pill */}
-            <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+            <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80 shrink-0">
               <button
                 type="button"
                 onClick={() => handleLanguageChange('en')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all whitespace-nowrap ${
+                className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold uppercase transition-all whitespace-nowrap ${
                   currentLang === 'en'
                     ? 'bg-[#0B2545] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -320,7 +320,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <button
                 type="button"
                 onClick={() => handleLanguageChange('ar')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold font-cairo transition-all whitespace-nowrap ${
+                className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold font-cairo transition-all whitespace-nowrap ${
                   currentLang === 'ar'
                     ? 'bg-[#0B2545] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -337,19 +337,19 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 text-[#0B2545] border border-slate-200/90 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-2xs active:scale-[0.98] whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-[#0B2545] border border-slate-200/90 px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs font-bold transition-all shadow-2xs active:scale-[0.98] whitespace-nowrap"
                   id="user-menu-btn"
                 >
-                  <div className="w-5 h-5 rounded-full bg-[#0B2545] text-amber-400 font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                  <div className="w-4.5 h-4.5 rounded-full bg-[#0B2545] text-amber-400 font-extrabold text-[9px] flex items-center justify-center shrink-0">
                     {currentUser.avatarInitials || 'MM'}
                   </div>
-                  <span className="truncate whitespace-nowrap">{currentUser.name.split(' ')[0]}</span>
+                  <span className="truncate whitespace-nowrap max-w-[80px]">{currentUser.name.split(' ')[0]}</span>
                   {currentUser.role === 'admin' && (
-                    <span className="bg-amber-400 text-slate-950 text-[9px] uppercase px-1.5 py-0.5 rounded font-black whitespace-nowrap">
-                      {isRTL ? 'طاقم العمل' : 'Staff'}
+                    <span className="bg-amber-400 text-slate-950 text-[9px] uppercase px-1 py-0.2 rounded font-black whitespace-nowrap">
+                      {isRTL ? 'طاقم' : 'Staff'}
                     </span>
                   )}
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                 </button>
 
                 {userDropdownOpen && (
@@ -425,11 +425,11 @@ export const Navbar: React.FC<NavbarProps> = () => {
             ) : (
               <Link
                 to="/client-portal"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-700 hover:text-[#0B2545] hover:bg-slate-100/90 border border-slate-200/90 shadow-2xs active:scale-[0.98] whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 xl:py-2 rounded-lg text-xs font-bold transition-all text-slate-700 hover:text-[#0B2545] hover:bg-slate-100/90 border border-slate-200/90 shadow-2xs active:scale-[0.98] whitespace-nowrap shrink-0"
                 id="main-signin-btn"
                 title={isRTL ? "تسجيل الدخول" : "Login"}
               >
-                <User className="w-4 h-4 text-slate-500 shrink-0" />
+                <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                 <span className="whitespace-nowrap">{languageStore.t('nav_portal')}</span>
               </Link>
             )}
@@ -437,12 +437,12 @@ export const Navbar: React.FC<NavbarProps> = () => {
             {/* Primary CTA: 60-Minute Fast Quotation - STRICT SINGLE LINE */}
             <Link
               to="/get-a-quote"
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] bg-[#C81D25] hover:bg-[#a8161d] text-white whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-lg text-xs xl:text-sm font-bold transition-all shadow-xs hover:shadow-md active:scale-[0.98] bg-[#C81D25] hover:bg-[#a8161d] text-white whitespace-nowrap shrink-0"
               id="main-quote-btn"
             >
-              <Clock className="w-4 h-4 text-amber-300 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
               <span className="whitespace-nowrap">{languageStore.t('nav_quote_instant')}</span>
-              <ArrowRight className={`w-4 h-4 shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
+              <ArrowRight className={`w-3.5 h-3.5 shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
             </Link>
           </div>
 
